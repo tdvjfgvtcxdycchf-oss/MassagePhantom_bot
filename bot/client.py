@@ -13,3 +13,10 @@ if config.proxy_url:
     session._connector_init["force_close"] = True
 else:
     session = None
+
+bot = Bot(
+    token=config.bot_token,
+    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    session=session,
+)
+dp = Dispatcher(storage=MemoryStorage())
