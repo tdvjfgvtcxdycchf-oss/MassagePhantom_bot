@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from datetime import datetime
-from bot.client import bot, dp, setup_proxy_session
+from bot.client import bot, dp
 from bot.handlers import router as main_router
 from bot.payments import router as payments_router
 from bot.filter_handlers import router as filters_router
@@ -73,7 +73,6 @@ async def expiry_loop() -> None:
 
 
 async def main() -> None:
-    await setup_proxy_session()
     await db.init_db()
     await restore_sessions()
 
