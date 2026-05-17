@@ -86,7 +86,7 @@ async def main() -> None:
 
     logger.info("Бот запущен.")
     try:
-        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types(), timeout=10)
     finally:
         await ub.stop_all()
         await bot.session.close()
