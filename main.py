@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import ssl
 
 from aiohttp import web
 from aiogram import Bot
@@ -22,11 +21,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-WEBHOOK_PORT = 88
+WEBHOOK_INTERNAL_PORT = 8080
 WEBHOOK_PATH = f"/webhook/{config.bot_token}"
-WEBHOOK_URL = f"https://{config.webhook_host}:{WEBHOOK_PORT}{WEBHOOK_PATH}"
+WEBHOOK_URL = f"https://{config.webhook_host}{WEBHOOK_PATH}"
 CERT_PATH = "/app/ssl/bot_cert.pem"
-KEY_PATH = "/app/ssl/bot_key.pem"
 
 
 async def restore_sessions() -> None:
@@ -96,6 +94,7 @@ async def on_startup(bot: Bot) -> None:
         allowed_updates=dp.resolve_used_update_types(),
         drop_pending_updates=True,
     )
+    # cert is only needed for the initial setWebhook call so Telegram trusts our self-signed cert
     logger.info("Webhook установлен: %s", WEBHOOK_URL)
 
 
@@ -115,15 +114,12 @@ def main() -> None:
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)
 
-    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    ssl_context.load_cert_chain(CERT_PATH, KEY_PATH)
-
     app = web.Application()
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
 
-    logger.info("Бот запущен (webhook, порт %d).", WEBHOOK_PORT)
-    web.run_app(app, host="0.0.0.0", port=WEBHOOK_PORT, ssl_context=ssl_context)
+    logger.info("Бот запущен (webhook, внутренний порт %d).", WEBHOOK_INTERNAL_PORT)
+    web.run_app(app, host="0.0.0.0", port=WEBHOOK_INTERNAL_PORT)
 
 
 if __name__ == "__main__":
