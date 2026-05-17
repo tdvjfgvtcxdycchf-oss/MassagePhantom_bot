@@ -1,0 +1,27 @@
+# Env и секреты
+.env
+*.session
+*.session-journal
+
+# База данных
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Логи
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp

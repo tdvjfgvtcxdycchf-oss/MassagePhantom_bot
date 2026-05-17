@@ -1,0 +1,198 @@
+import logging
+from datetime import datetime
+
+from aiogram import Router, F
+from aiogram.filters import Command
+from aiogram.types import (
+    CallbackQuery, LabeledPrice,
+    PreCheckoutQuery, Message,
+)
+
+import db
+from config import config
+from bot.keyboards import main_menu_kb, premium_kb, premium_tiers
+
+logger = logging.getLogger(__name__)
+router = Router()
+
+
+def _tier_by_months(months: int) -> tuple[int, str] | None:
+    for m, price, label in premium_tiers():
+        if m == months:
+            return price, label
+    return None
+
+
+# ── Страница с выбором тарифа ─────────────────────────────────────────────────
+
+@router.callback_query(F.data == "premium:info")
+async def premium_info(cb: CallbackQuery) -> None:
+    lines = []
+    for months, price, label in premium_tiers():
+        lines.append(f"• {label} — <b>{price} ⭐</b>")
+    await cb.message.edit_text(
+        "⭐ <b>Premium</b>\n\n"
+        "Без подписки бот только сообщает что сообщение удалено — содержимое скрыто.\n\n"
+        "<b>С Premium:</b>\n"
+        "• 🗑 Полный текст удалённых сообщений\n"
+        "• ✏️ История редактирований\n"
+        "• 👥 Мониторинг групп и каналов\n"
+        "• 👁 Одноразовые медиафайлы (view-once)\n"
+        "• ⚙️ Гибкие фильтры уведомлений\n\n"
+        "<b>Тарифы:</b>\n" + "\n".join(lines) + "\n\n"
+        "Оплата через Telegram Stars — мгновенно, без карт.",
+        reply_markup=premium_kb(),
+    )
+    await cb.answer()
+
+
+# ── Отправка инвойса ──────────────────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("premium:buy:"))
+async def send_invoice(cb: CallbackQuery) -> None:
+    months = int(cb.data.split(":")[2])
+    tier = _tier_by_months(months)
+    if not tier:
+        await cb.answer("Неизвестный тариф", show_alert=True)
+        return
+    price, label = tier
+    from bot.client import bot
+    await bot.send_invoice(
+        chat_id=cb.from_user.id,
+        title=f"⭐ Premium — {label}",
+        description=f"Мониторинг групп, каналов, ботов и одноразовых сообщений на {label.lower()}.",
+        payload=f"premium:{months}",
+        currency="XTR",
+        prices=[LabeledPrice(label=label, amount=price)],
+    )
+    await cb.answer()
+
+
+# ── Pre-checkout ──────────────────────────────────────────────────────────────
+
+@router.pre_checkout_query()
+async def pre_checkout(query: PreCheckoutQuery) -> None:
+    await query.answer(ok=True)
+
+
+# ── Успешная оплата ───────────────────────────────────────────────────────────
+
+@router.message(F.successful_payment)
+async def payment_success(msg: Message) -> None:
+    user_id = msg.from_user.id
+    payload = msg.successful_payment.invoice_payload  # "premium:N"
+    charge_id = msg.successful_payment.telegram_payment_charge_id
+    amount = msg.successful_payment.total_amount
+
+    months = int(payload.split(":")[1]) if ":" in payload else 1
+    tier = _tier_by_months(months)
+    label = tier[1] if tier else f"{months} мес."
+
+    await db.save_payment(user_id, charge_id, amount, months)
+    expires = await db.set_premium(user_id, months=months)
+    dt = datetime.fromtimestamp(expires).strftime("%d.%m.%Y")
+    premium = await db.is_premium(user_id)
+    await msg.answer(
+        f"🎉 <b>Premium активирован!</b>\n\n"
+        f"Тариф: {label}\n"
+        f"Действует до: <b>{dt}</b>\n\n"
+        "Теперь доступно:\n"
+        "• Мониторинг групп, каналов и ботов\n"
+        "• Одноразовые (view-once) медиафайлы\n"
+        "• Фильтры уведомлений",
+        reply_markup=main_menu_kb(premium),
+    )
+
+
+# ── Команды владельца ─────────────────────────────────────────────────────────
+
+def _owner_only(msg: Message) -> bool:
+    return msg.from_user.id == config.owner_id
+
+
+@router.message(Command("give_premium"))
+async def cmd_give_premium(msg: Message) -> None:
+    if not _owner_only(msg):
+        return
+    parts = msg.text.split()
+    if len(parts) < 3:
+        await msg.answer("Формат: <code>/give_premium &lt;user_id&gt; &lt;месяцы&gt;</code>")
+        return
+    try:
+        target_id = int(parts[1])
+        months = int(parts[2])
+    except ValueError:
+        await msg.answer("user_id и месяцы должны быть числами")
+        return
+    await db.ensure_user(target_id)
+    expires = await db.set_premium(target_id, months=months)
+    dt = datetime.fromtimestamp(expires).strftime("%d.%m.%Y")
+    await msg.answer(f"✅ Premium выдан пользователю <code>{target_id}</code> до {dt}")
+    try:
+        from bot.client import bot
+        await bot.send_message(
+            target_id,
+            f"🎁 Вам выдан Premium на {months} мес. (до {dt})!\n\nНажми /start для обновления меню.",
+        )
+    except Exception:
+        pass
+
+
+@router.message(Command("revoke_premium"))
+async def cmd_revoke_premium(msg: Message) -> None:
+    if not _owner_only(msg):
+        return
+    parts = msg.text.split()
+    if len(parts) < 2:
+        await msg.answer("Формат: <code>/revoke_premium &lt;user_id&gt;</code>")
+        return
+    try:
+        target_id = int(parts[1])
+    except ValueError:
+        await msg.answer("user_id должен быть числом")
+        return
+    await db.revoke_premium(target_id)
+    await msg.answer(f"✅ Premium отозван у пользователя <code>{target_id}</code>")
+
+
+@router.message(Command("refund"))
+async def cmd_refund(msg: Message) -> None:
+    if not _owner_only(msg):
+        return
+    parts = msg.text.split()
+    if len(parts) < 2:
+        await msg.answer("Формат: <code>/refund &lt;user_id&gt;</code>")
+        return
+    try:
+        target_id = int(parts[1])
+    except ValueError:
+        await msg.answer("user_id должен быть числом")
+        return
+
+    payment = await db.get_last_payment(target_id)
+    if not payment:
+        await msg.answer(f"❌ Нет активных платежей у пользователя <code>{target_id}</code>")
+        return
+
+    from bot.client import bot
+    try:
+        await bot.refund_star_payment(target_id, payment["charge_id"])
+        await db.mark_refunded(payment["charge_id"])
+        await db.revoke_premium(target_id)
+        dt = datetime.fromtimestamp(payment["created_at"]).strftime("%d.%m.%Y")
+        await msg.answer(
+            f"✅ Возврат выполнен:\n"
+            f"Пользователь: <code>{target_id}</code>\n"
+            f"Сумма: {payment['amount']} ⭐\n"
+            f"Дата платежа: {dt}"
+        )
+        try:
+            await bot.send_message(
+                target_id,
+                f"💫 Вам возвращено {payment['amount']} Stars. Premium деактивирован.",
+            )
+        except Exception:
+            pass
+    except Exception as e:
+        logger.error("Ошибка возврата Stars: %s", e)
+        await msg.answer(f"❌ Ошибка возврата: {e}")
