@@ -22,7 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-WEBHOOK_PORT = 8443
+WEBHOOK_PORT = 88
 WEBHOOK_PATH = f"/webhook/{config.bot_token}"
 WEBHOOK_URL = f"https://{config.webhook_host}:{WEBHOOK_PORT}{WEBHOOK_PATH}"
 CERT_PATH = "/app/ssl/bot_cert.pem"
