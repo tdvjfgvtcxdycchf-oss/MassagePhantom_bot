@@ -87,14 +87,6 @@ def promo_months_kb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def promo_uses_kb() -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-    for n, label in [(1, "1 раз"), (5, "5 раз"), (10, "10 раз"), (999, "Безлимит")]:
-        builder.button(text=label, callback_data=f"adm:promo:uses:{n}")
-    builder.adjust(2)
-    return builder.as_markup()
-
-
 def admin_users_kb(users: list, page: int, total: int, per_page: int = 10) -> InlineKeyboardMarkup:
     STATUS_ICON = {"premium": "⭐", "trial": "🎁", "free": "🆓"}
     builder = InlineKeyboardBuilder()

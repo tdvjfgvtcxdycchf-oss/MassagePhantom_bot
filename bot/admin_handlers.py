@@ -12,7 +12,7 @@ from config import config
 from bot.keyboards import (
     admin_main_kb, admin_users_kb, admin_user_kb,
     admin_broadcast_kb, admin_bc_confirm_kb,
-    admin_promos_kb, promo_months_kb, promo_uses_kb,
+    admin_promos_kb, promo_months_kb,
 )
 
 logger = logging.getLogger(__name__)
@@ -407,18 +407,27 @@ async def adm_promo_months(cb: CallbackQuery, state: FSMContext) -> None:
     months = int(cb.data.split(":")[3])
     await state.update_data(promo_months=months)
     await state.set_state(AdminState.waiting_promo_uses)
-    await cb.message.edit_text(
-        f"Срок: <b>{months} мес.</b>\n\nВыбери сколько раз можно использовать:",
-        reply_markup=promo_uses_kb(),
+    await cb.message.answer(
+        f"Срок: <b>{months} мес.</b>\n\n"
+        "Сколько раз можно использовать?\n"
+        "Введи число (например <code>5</code>) или <code>0</code> для безлимита:"
     )
     await cb.answer()
 
 
-@router.callback_query(F.data.startswith("adm:promo:uses:"), AdminState.waiting_promo_uses)
-async def adm_promo_uses(cb: CallbackQuery, state: FSMContext) -> None:
-    if not _owner_only(cb.from_user.id):
+@router.message(AdminState.waiting_promo_uses)
+async def adm_promo_uses(msg: Message, state: FSMContext) -> None:
+    if not _owner_only(msg.from_user.id):
         return
-    max_uses = int(cb.data.split(":")[3])
+    try:
+        n = int(msg.text.strip())
+        if n < 0:
+            raise ValueError
+    except ValueError:
+        await msg.answer("❌ Введи целое число ≥ 0 (0 = безлимит):")
+        return
+
+    max_uses = 999 if n == 0 else n
     data = await state.get_data()
     code = data["promo_code"]
     months = data["promo_months"]
@@ -426,14 +435,13 @@ async def adm_promo_uses(cb: CallbackQuery, state: FSMContext) -> None:
 
     await db.create_promo(code, months, max_uses)
     uses_label = "безлимит" if max_uses == 999 else str(max_uses)
-    await cb.message.edit_text(
+    await msg.answer(
         f"✅ <b>Промокод создан!</b>\n\n"
         f"Код: <code>{code}</code>\n"
         f"Срок: {months} мес.\n"
         f"Использований: {uses_label}",
         reply_markup=admin_main_kb(),
     )
-    await cb.answer()
 
 
 # ── Дерево приглашений ────────────────────────────────────────────────────────
