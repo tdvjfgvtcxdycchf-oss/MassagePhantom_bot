@@ -1,5 +1,4 @@
 import os
-import secrets
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
@@ -16,11 +15,11 @@ class Config:
     premium_price: int
     fernet_key: bytes
     proxy_url: str | None
-    proxy_url: str | None  # socks5://user:pass@host:port или None
+    webhook_host: str
 
 
 def load_config() -> Config:
-    missing = [k for k in ("API_ID", "API_HASH", "BOT_TOKEN", "OWNER_ID") if not os.getenv(k)]
+    missing = [k for k in ("API_ID", "API_HASH", "BOT_TOKEN", "OWNER_ID", "WEBHOOK_HOST") if not os.getenv(k)]
     if missing:
         raise ValueError(
             f"Не заданы переменные окружения: {', '.join(missing)}\n"
@@ -48,6 +47,7 @@ def load_config() -> Config:
         premium_price=int(os.getenv("PREMIUM_PRICE", "100")),
         fernet_key=fernet_bytes,
         proxy_url=os.getenv("PROXY_URL") or None,
+        webhook_host=os.environ["WEBHOOK_HOST"],
     )
 
 
