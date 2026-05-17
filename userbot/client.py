@@ -1,7 +1,8 @@
 import logging
-from urllib.parse import urlparse
+import os
 from telethon import TelegramClient
 from telethon.sessions import StringSession
+from telethon.network.connection import ConnectionTcpMTProxyRandomizedIntermediate
 from config import config
 
 logger = logging.getLogger(__name__)
@@ -9,34 +10,33 @@ logger = logging.getLogger(__name__)
 _active: dict[int, TelegramClient] = {}
 
 
-def _parse_proxy(proxy_url: str | None) -> dict | None:
-    """Парсит PROXY_URL в формат для Telethon."""
-    if not proxy_url:
-        return None
-    p = urlparse(proxy_url)
-    scheme = p.scheme.lower()
-    proxy_type = 2 if "socks5" in scheme else (1 if "socks4" in scheme else 3)  # 3=HTTP
-    proxy = {
-        "proxy_type": proxy_type,
-        "addr": p.hostname,
-        "port": p.port,
-    }
-    if p.username:
-        proxy["username"] = p.username
-    if p.password:
-        proxy["password"] = p.password
-    return proxy
+def _mtproxy_settings():
+    raw = os.getenv("MTPROXY_URL", "")
+    if not raw:
+        return None, None
+    parts = raw.split(":")
+    if len(parts) != 3:
+        return None, None
+    host, port, secret = parts
+    return ConnectionTcpMTProxyRandomizedIntermediate, (host, int(port), secret)
 
 
-_PROXY = _parse_proxy(config.proxy_url)
+_MTPROXY_CONN, _MTPROXY = _mtproxy_settings()
 
 
 def _make_client(session_string: str) -> TelegramClient:
+    if _MTPROXY_CONN:
+        return TelegramClient(
+            StringSession(session_string),
+            config.api_id,
+            config.api_hash,
+            connection=_MTPROXY_CONN,
+            proxy=_MTPROXY,
+        )
     return TelegramClient(
         StringSession(session_string),
         config.api_id,
         config.api_hash,
-        proxy=_PROXY,
     )
 
 
@@ -80,6 +80,6 @@ def active_count() -> int:
 
 async def make_temp_client() -> TelegramClient:
     """Временный клиент для авторизации."""
-    client = TelegramClient(StringSession(), config.api_id, config.api_hash, proxy=_PROXY)
+    client = _make_client("")
     await client.connect()
     return client
