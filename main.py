@@ -3,7 +3,6 @@ import logging
 
 from aiohttp import web
 from aiogram import Bot
-from aiogram.types import BufferedInputFile
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
 from bot.client import bot, dp
@@ -24,7 +23,6 @@ logger = logging.getLogger(__name__)
 WEBHOOK_INTERNAL_PORT = 8080
 WEBHOOK_PATH = f"/webhook/{config.bot_token}"
 WEBHOOK_URL = f"https://{config.webhook_host}{WEBHOOK_PATH}"
-CERT_PATH = "/app/ssl/bot_cert.pem"
 
 
 async def restore_sessions() -> None:
@@ -85,16 +83,11 @@ async def on_startup(bot: Bot) -> None:
     asyncio.create_task(purge_loop())
     asyncio.create_task(expiry_loop())
 
-    with open(CERT_PATH, "rb") as f:
-        cert = f.read()
-
     await bot.set_webhook(
         url=WEBHOOK_URL,
-        certificate=BufferedInputFile(cert, filename="cert.pem"),
         allowed_updates=dp.resolve_used_update_types(),
         drop_pending_updates=True,
     )
-    # cert is only needed for the initial setWebhook call so Telegram trusts our self-signed cert
     logger.info("Webhook установлен: %s", WEBHOOK_URL)
 
 
