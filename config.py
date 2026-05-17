@@ -12,9 +12,11 @@ class Config:
     api_hash: str
     bot_token: str
     session_name: str
-    owner_id: int          # получает premium бесплатно
+    owner_id: int
     premium_price: int
-    fernet_key: bytes      # для шифрования session_string в БД
+    fernet_key: bytes
+    proxy_url: str | None
+    proxy_url: str | None  # socks5://user:pass@host:port или None
 
 
 def load_config() -> Config:
@@ -45,6 +47,7 @@ def load_config() -> Config:
         owner_id=int(os.environ["OWNER_ID"]),
         premium_price=int(os.getenv("PREMIUM_PRICE", "100")),
         fernet_key=fernet_bytes,
+        proxy_url=os.getenv("PROXY_URL") or None,
     )
 
 
