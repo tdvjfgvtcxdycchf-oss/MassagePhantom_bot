@@ -4,4 +4,5 @@ aiosqlite==0.20.0
 python-dotenv==1.0.1
 cryptography==42.0.8
 python-socks[asyncio]==2.4.4
+pysocks==1.7.1
 aiohttp-socks==0.9.0

@@ -2,7 +2,6 @@ import logging
 import os
 from telethon import TelegramClient
 from telethon.sessions import StringSession
-from telethon.network.connection import ConnectionTcpMTProxyRandomizedIntermediate
 from config import config
 
 logger = logging.getLogger(__name__)
@@ -10,33 +9,27 @@ logger = logging.getLogger(__name__)
 _active: dict[int, TelegramClient] = {}
 
 
-def _mtproxy_settings():
-    raw = os.getenv("MTPROXY_URL", "")
+def _socks5_proxy():
+    raw = os.getenv("SOCKS5_URL", "")
     if not raw:
-        return None, None
+        return None
+    import socks
     parts = raw.split(":")
-    if len(parts) != 3:
-        return None, None
-    host, port, secret = parts
-    return ConnectionTcpMTProxyRandomizedIntermediate, (host, int(port), secret)
+    host, port = parts[0], int(parts[1])
+    if len(parts) == 4:
+        return (socks.SOCKS5, host, port, True, parts[2], parts[3])
+    return (socks.SOCKS5, host, port)
 
 
-_MTPROXY_CONN, _MTPROXY = _mtproxy_settings()
+_PROXY = _socks5_proxy()
 
 
 def _make_client(session_string: str) -> TelegramClient:
-    if _MTPROXY_CONN:
-        return TelegramClient(
-            StringSession(session_string),
-            config.api_id,
-            config.api_hash,
-            connection=_MTPROXY_CONN,
-            proxy=_MTPROXY,
-        )
     return TelegramClient(
         StringSession(session_string),
         config.api_id,
         config.api_hash,
+        proxy=_PROXY,
     )
 
 
