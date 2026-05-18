@@ -297,6 +297,8 @@ def register(client: TelegramClient, owner_id: int) -> None:
                 continue
 
             chat_type = cached.get("chat_type", "private")
+            logger.info("on_delete owner=%s event_chat=%s cached_chat=%s cached_type=%s msg_id=%s",
+                        owner_id, chat_id, cached.get("chat_id"), chat_type, msg_id)
             premium = await db.is_premium(owner_id)
 
             if not premium:
