@@ -405,26 +405,41 @@ async def invite_get_link(cb: CallbackQuery) -> None:
     from bot.client import bot as _bot
     me = await _bot.get_me()
     link = f"https://t.me/{me.username}?start=ref_{code}"
-    caption = (
-        "👁 Твой друг приглашает тебя в <b>Massage Phantom</b>\n\n"
+
+    # Текст для друга (уходит через share)
+    share_text = (
+        "👁 Твой друг приглашает тебя в Massage Phantom\n\n"
         "Бот, который запоминает то, что другие хотят скрыть:\n"
         "• 🗑 удалённые сообщения\n"
         "• ✏️ отредактированные сообщения\n"
         "• 👁 одноразовые медиа\n\n"
         "Подключи свой аккаунт Telegram — и ничего не упустишь.\n\n"
-        "🎁 Если зарегистрируешься по этой ссылке — твой друг получит <b>+7 дней</b> бесплатно:\n\n"
-        f"<code>{link}</code>"
+        "🎁 За регистрацию по этой ссылке твой друг получит +7 дней бесплатно"
     )
+
+    import urllib.parse
+    share_url = f"https://t.me/share/url?url={urllib.parse.quote(link)}&text={urllib.parse.quote(share_text)}"
+
+    # Текст для инвайтера
+    caption = (
+        "🔗 <b>Твоя реферальная ссылка</b>\n\n"
+        "За каждого друга, который подключится по ней — ты получишь <b>+7 дней</b> бесплатно.\n\n"
+        "Нажми кнопку ниже, чтобы отправить другу 👇"
+    )
+
     from pathlib import Path
     from aiogram.utils.keyboard import InlineKeyboardBuilder as _IKB
-    back_kb = _IKB()
-    back_kb.button(text="◀️ В меню", callback_data="back_menu")
+    from aiogram.types import InlineKeyboardButton
+    kb = _IKB()
+    kb.row(InlineKeyboardButton(text="📤 Отправить другу", url=share_url))
+    kb.row(InlineKeyboardButton(text="◀️ В меню", callback_data="back_menu"))
+
     promo = Path("/app/promo.jpg")
     if promo.exists():
         from aiogram.types import FSInputFile
-        await cb.message.answer_photo(FSInputFile(str(promo)), caption=caption, reply_markup=back_kb.as_markup())
+        await cb.message.answer_photo(FSInputFile(str(promo)), caption=caption, reply_markup=kb.as_markup())
     else:
-        await cb.message.answer(caption, reply_markup=back_kb.as_markup())
+        await cb.message.answer(caption, reply_markup=kb.as_markup())
     await cb.answer()
 
 
