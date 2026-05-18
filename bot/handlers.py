@@ -325,8 +325,18 @@ async def back_menu(cb: CallbackQuery) -> None:
     user_id = cb.from_user.id
     premium = await db.is_premium(user_id)
     owner = user_id == config.owner_id
-    await cb.message.edit_text("Главное меню:", reply_markup=main_menu_kb(premium, is_owner=owner))
-    _menu_msgs[user_id] = (cb.message.chat.id, cb.message.message_id)
+    kb = main_menu_kb(premium, is_owner=owner)
+    try:
+        await cb.message.edit_text("Главное меню:", reply_markup=kb)
+        _menu_msgs[user_id] = (cb.message.chat.id, cb.message.message_id)
+    except Exception:
+        from bot.client import bot as _bot
+        try:
+            await cb.message.delete()
+        except Exception:
+            pass
+        sent = await _bot.send_message(cb.message.chat.id, "Главное меню:", reply_markup=kb)
+        _menu_msgs[user_id] = (cb.message.chat.id, sent.message_id)
     await cb.answer()
 
 
