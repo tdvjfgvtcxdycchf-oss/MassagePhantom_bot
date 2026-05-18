@@ -87,6 +87,7 @@ async def _can_notify(owner_id: int, chat_type: str, chat_id: int = 0, is_viewon
     if is_viewonce and not premium:
         return False
     if chat_type == "private":
+        logger.info("filter owner=%s type=private chat=%s → True (no filter)", owner_id, chat_id)
         return True
     if not premium:
         return False
@@ -230,6 +231,8 @@ def register(client: TelegramClient, owner_id: int) -> None:
             return
 
         chat_type = _chat_type(event)
+        logger.info("on_edit owner=%s chat_id=%s msg_id=%s is_private=%s is_group=%s is_channel=%s chat_type=%s",
+                    owner_id, event.chat_id, msg.id, event.is_private, event.is_group, event.is_channel, chat_type)
         if not await _can_notify(owner_id, chat_type, event.chat_id):
             return
 
