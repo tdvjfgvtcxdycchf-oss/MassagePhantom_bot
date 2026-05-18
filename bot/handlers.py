@@ -389,7 +389,7 @@ async def invite_get_link(cb: CallbackQuery) -> None:
     me = await _bot.get_me()
     link = f"https://t.me/{me.username}?start=ref_{code}"
     caption = (
-        "👁 Твой друг приглашает тебя в <b>Прозрачность</b>\n\n"
+        "👁 Твой друг приглашает тебя в <b>Massage Phantom</b>\n\n"
         "Бот, который запоминает то, что другие хотят скрыть:\n"
         "• 🗑 удалённые сообщения\n"
         "• ✏️ отредактированные сообщения\n"
