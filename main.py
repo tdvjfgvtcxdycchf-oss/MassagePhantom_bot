@@ -36,7 +36,6 @@ async def restore_sessions() -> None:
             await ub.start_client(user_id, session_string)
         except Exception as e:
             logger.error("Не удалось восстановить сессию user=%s: %s", user_id, e)
-            await db.delete_session(user_id)
     logger.info("Восстановлено %d сессий.", ub.active_count())
 
 
