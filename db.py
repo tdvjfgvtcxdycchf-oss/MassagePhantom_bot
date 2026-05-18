@@ -453,14 +453,16 @@ async def get_message(owner_id: int, chat_id: int, message_id: int) -> dict | No
 
 
 async def find_by_msg_id(owner_id: int, message_id: int) -> dict | None:
-    """Fallback: ищем по message_id когда chat_id неизвестен (приватные/группы)."""
+    """Fallback: ищем по message_id когда chat_id неизвестен (приватные/группы).
+    Приоритет отдаём не-приватным чатам чтобы избежать коллизий ID."""
     week_ago = int(time.time()) - MESSAGE_TTL
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
             """SELECT * FROM messages
                WHERE owner_id=? AND message_id=? AND date>?
-               ORDER BY date DESC LIMIT 1""",
+               ORDER BY CASE WHEN chat_type != 'private' THEN 0 ELSE 1 END, date DESC
+               LIMIT 1""",
             (owner_id, message_id, week_ago),
         ) as cur:
             row = await cur.fetchone()
