@@ -338,10 +338,27 @@ async def disconnect(cb: CallbackQuery) -> None:
     from userbot.client import stop_client
     await stop_client(user_id)
     await db.delete_session(user_id)
+    from aiogram.utils.keyboard import InlineKeyboardBuilder as _IKB
+    reconnect_kb = _IKB()
+    reconnect_kb.button(text="🔌 Подключить снова", callback_data="reconnect")
     await cb.message.edit_text(
         "🔌 <b>Аккаунт отключён.</b> Мониторинг остановлен.\n"
-        "Данные аккаунта удалены. /start — подключить снова."
+        "Данные аккаунта удалены.",
+        reply_markup=reconnect_kb.as_markup(),
     )
+    await cb.answer()
+
+
+@router.callback_query(F.data == "reconnect")
+async def reconnect(cb: CallbackQuery, state: FSMContext) -> None:
+    await cb.message.edit_text(
+        "🔌 <b>Подключение аккаунта</b>\n\nВведи номер телефона или нажми кнопку:",
+    )
+    await cb.message.answer(
+        "Нажми кнопку ниже или введи номер вручную (например: <code>+79001234567</code>)",
+        reply_markup=request_phone_kb(),
+    )
+    await state.set_state(AuthState.waiting_phone)
     await cb.answer()
 
 
@@ -399,12 +416,15 @@ async def invite_get_link(cb: CallbackQuery) -> None:
         f"<code>{link}</code>"
     )
     from pathlib import Path
+    from aiogram.utils.keyboard import InlineKeyboardBuilder as _IKB
+    back_kb = _IKB()
+    back_kb.button(text="◀️ В меню", callback_data="back_menu")
     promo = Path("/app/promo.jpg")
     if promo.exists():
         from aiogram.types import FSInputFile
-        await cb.message.answer_photo(FSInputFile(str(promo)), caption=caption)
+        await cb.message.answer_photo(FSInputFile(str(promo)), caption=caption, reply_markup=back_kb.as_markup())
     else:
-        await cb.message.answer(caption)
+        await cb.message.answer(caption, reply_markup=back_kb.as_markup())
     await cb.answer()
 
 
