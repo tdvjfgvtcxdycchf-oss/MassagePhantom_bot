@@ -388,12 +388,23 @@ async def invite_get_link(cb: CallbackQuery) -> None:
     from bot.client import bot as _bot
     me = await _bot.get_me()
     link = f"https://t.me/{me.username}?start=ref_{code}"
-    await cb.message.answer(
-        f"🔗 <b>Ссылка для приглашения:</b>\n\n"
-        f"<code>{link}</code>\n\n"
-        "Когда друг подключит свой аккаунт по этой ссылке — ты получишь <b>+7 дней</b>.\n"
-        "Ссылка одноразовая.",
+    caption = (
+        "👁 Твой друг приглашает тебя в <b>Прозрачность</b>\n\n"
+        "Бот, который запоминает то, что другие хотят скрыть:\n"
+        "• 🗑 удалённые сообщения\n"
+        "• ✏️ отредактированные сообщения\n"
+        "• 👁 одноразовые медиа\n\n"
+        "Подключи свой аккаунт Telegram — и ничего не упустишь.\n\n"
+        "🎁 Если зарегистрируешься по этой ссылке — твой друг получит <b>+7 дней</b> бесплатно:\n\n"
+        f"<code>{link}</code>"
     )
+    from pathlib import Path
+    promo = Path("/app/promo.jpg")
+    if promo.exists():
+        from aiogram.types import FSInputFile
+        await cb.message.answer_photo(FSInputFile(str(promo)), caption=caption)
+    else:
+        await cb.message.answer(caption)
     await cb.answer()
 
 

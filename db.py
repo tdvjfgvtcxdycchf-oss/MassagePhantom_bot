@@ -106,10 +106,15 @@ async def init_db() -> None:
 
             CREATE TABLE IF NOT EXISTS invites (
                 code       TEXT PRIMARY KEY,
-                owner_id   INTEGER NOT NULL,
-                used_by    INTEGER,
-                created_at INTEGER NOT NULL,
-                used_at    INTEGER
+                owner_id   INTEGER NOT NULL UNIQUE,
+                created_at INTEGER NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS invite_uses (
+                code    TEXT NOT NULL,
+                used_by INTEGER NOT NULL,
+                used_at INTEGER NOT NULL,
+                PRIMARY KEY (code, used_by)
             );
 
             CREATE TABLE IF NOT EXISTS promo_codes (
@@ -314,9 +319,15 @@ async def mark_trial_notified(user_id: int) -> None:
 # ── Инвайты ───────────────────────────────────────────────────────────────────
 
 async def create_invite(owner_id: int) -> str:
-    import secrets as _secrets
-    code = _secrets.token_urlsafe(8)
     async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT code FROM invites WHERE owner_id=?", (owner_id,)
+        ) as cur:
+            row = await cur.fetchone()
+        if row:
+            return row[0]
+        import secrets as _secrets
+        code = _secrets.token_urlsafe(8)
         await db.execute(
             "INSERT INTO invites (code, owner_id, created_at) VALUES (?,?,?)",
             (code, owner_id, int(time.time())),
@@ -326,20 +337,26 @@ async def create_invite(owner_id: int) -> str:
 
 
 async def use_invite(code: str, new_user_id: int) -> int | None:
-    """Помечает инвайт использованным. Возвращает owner_id или None если уже использован."""
+    """Начисляет реферальную награду. Возвращает owner_id или None если недопустимо."""
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
-            "SELECT owner_id, used_by FROM invites WHERE code=?", (code,)
+            "SELECT owner_id FROM invites WHERE code=?", (code,)
         ) as cur:
             row = await cur.fetchone()
-        if not row or row[1] is not None:
+        if not row:
             return None
         owner_id = row[0]
         if owner_id == new_user_id:
             return None
+        async with db.execute(
+            "SELECT 1 FROM invite_uses WHERE code=? AND used_by=?", (code, new_user_id)
+        ) as cur:
+            already = await cur.fetchone()
+        if already:
+            return None
         await db.execute(
-            "UPDATE invites SET used_by=?, used_at=? WHERE code=?",
-            (new_user_id, int(time.time()), code),
+            "INSERT INTO invite_uses (code, used_by, used_at) VALUES (?,?,?)",
+            (code, new_user_id, int(time.time())),
         )
         await db.commit()
     return owner_id
@@ -650,8 +667,9 @@ async def admin_user_detail(user_id: int) -> dict | None:
                        WHERE p.user_id=u.user_id AND p.refunded_at IS NULL) AS payment_count,
                       (SELECT COALESCE(SUM(p.amount),0) FROM payments p
                        WHERE p.user_id=u.user_id AND p.refunded_at IS NULL) AS total_spent,
-                      (SELECT COUNT(*) FROM invites i
-                       WHERE i.owner_id=u.user_id AND i.used_by IS NOT NULL) AS invites_sent
+                      (SELECT COUNT(*) FROM invite_uses iu
+                       JOIN invites i ON i.code=iu.code
+                       WHERE i.owner_id=u.user_id) AS invites_sent
                FROM users u LEFT JOIN sessions s ON s.user_id=u.user_id
                WHERE u.user_id=?""",
             (user_id,),
@@ -761,7 +779,8 @@ async def get_invite_tree() -> list[dict]:
                    u.premium_until, u.trial_until,
                    i.owner_id AS invited_by
             FROM users u
-            LEFT JOIN invites i ON i.used_by = u.user_id
+            LEFT JOIN invite_uses iu ON iu.used_by = u.user_id
+            LEFT JOIN invites i ON i.code = iu.code
             WHERE u.is_owner = 0
             ORDER BY u.created_at
         """) as cur:

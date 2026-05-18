@@ -467,6 +467,10 @@ def _build_invite_tree_html(users: list[dict]) -> str:
         if tu > now: return "trial", "🎁"
         return "free", "🆓"
 
+    def count_all(uid: int) -> int:
+        kids = children.get(uid, [])
+        return len(kids) + sum(count_all(k) for k in kids)
+
     def render(uid: int) -> str:
         u = by_id.get(uid)
         if not u:
@@ -475,6 +479,12 @@ def _build_invite_tree_html(users: list[dict]) -> str:
         name = (u.get("display_name") or f"id{uid}").replace("<", "&lt;").replace(">", "&gt;")
         reg = datetime.fromtimestamp(u["created_at"]).strftime("%d.%m.%Y")
         kids = children.get(uid, [])
+        direct = len(kids)
+        total = count_all(uid)
+        if direct > 0:
+            invite_badge = f' <span class="badge">{direct} приг.' + (f' / {total} всего' if total != direct else '') + '</span>'
+        else:
+            invite_badge = ""
         sub = ""
         if kids:
             sub = "<ul class='tree'>" + "".join(f"<li>{render(c)}</li>" for c in kids) + "</ul>"
@@ -483,6 +493,7 @@ def _build_invite_tree_html(users: list[dict]) -> str:
             f'<span class="icon">{icon}</span>'
             f'<span class="name">{name}</span>'
             f'<span class="meta">id{uid} · {reg}</span>'
+            f'{invite_badge}'
             f'</div>{sub}'
         )
 
@@ -515,6 +526,7 @@ ul.tree li::before{{content:"";position:absolute;left:-2px;top:18px;
 .icon{{font-size:15px}}
 .name{{font-weight:600;font-size:14px;color:#eef}}
 .meta{{color:#777;font-size:12px;margin-left:4px}}
+.badge{{background:#1e2a4a;color:#7b8cde;font-size:11px;padding:2px 8px;border-radius:12px;margin-left:8px;white-space:nowrap}}
 </style>
 </head>
 <body>
