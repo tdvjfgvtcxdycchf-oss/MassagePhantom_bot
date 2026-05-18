@@ -67,13 +67,7 @@ async def filters_set_mode(cb: CallbackQuery) -> None:
     await cb.answer("✅ Режим обновлён")
 
 
-@router.callback_query(F.data.startswith("filters:exc:list:"))
-async def filters_exc_list(cb: CallbackQuery) -> None:
-    chat_type = cb.data.split(":")[3]
-    uid = cb.from_user.id
-    mode = await db.get_filter_mode(uid, chat_type)
-    exceptions = await db.get_exceptions(uid, chat_type)
-    type_label = _TYPE_LABELS.get(chat_type, chat_type)
+def _exc_list_text(mode: str, type_label: str, exceptions: list) -> str:
     if mode == "all":
         desc = "Режим «Всё» — эти чаты <b>заглушены</b>:"
     else:
@@ -81,7 +75,22 @@ async def filters_exc_list(cb: CallbackQuery) -> None:
     text = f"📋 Исключения — {type_label}\n{desc}"
     if not exceptions:
         text += "\n\n<i>(список пуст)</i>"
-    await cb.message.edit_text(text, reply_markup=exceptions_list_kb(exceptions, chat_type))
+    return text
+
+
+@router.callback_query(F.data.startswith("filters:exc:list:"))
+async def filters_exc_list(cb: CallbackQuery) -> None:
+    parts = cb.data.split(":")
+    chat_type = parts[3]
+    page = int(parts[4]) if len(parts) > 4 else 0
+    uid = cb.from_user.id
+    mode = await db.get_filter_mode(uid, chat_type)
+    exceptions = await db.get_exceptions(uid, chat_type)
+    type_label = _TYPE_LABELS.get(chat_type, chat_type)
+    await cb.message.edit_text(
+        _exc_list_text(mode, type_label, exceptions),
+        reply_markup=exceptions_list_kb(exceptions, chat_type, page),
+    )
     await cb.answer()
 
 
@@ -89,19 +98,18 @@ async def filters_exc_list(cb: CallbackQuery) -> None:
 async def filters_exc_remove(cb: CallbackQuery) -> None:
     parts = cb.data.split(":")
     chat_type, chat_id = parts[3], int(parts[4])
+    page = int(parts[5]) if len(parts) > 5 else 0
     uid = cb.from_user.id
     await db.remove_exception(uid, chat_id)
     mode = await db.get_filter_mode(uid, chat_type)
     exceptions = await db.get_exceptions(uid, chat_type)
     type_label = _TYPE_LABELS.get(chat_type, chat_type)
-    if mode == "all":
-        desc = "Режим «Всё» — эти чаты <b>заглушены</b>:"
-    else:
-        desc = "Режим «Ничего» — эти чаты <b>разрешены</b>:"
-    text = f"📋 Исключения — {type_label}\n{desc}"
-    if not exceptions:
-        text += "\n\n<i>(список пуст)</i>"
-    await cb.message.edit_text(text, reply_markup=exceptions_list_kb(exceptions, chat_type))
+    total_pages = max(1, (len(exceptions) + 7) // 8)
+    page = min(page, total_pages - 1)
+    await cb.message.edit_text(
+        _exc_list_text(mode, type_label, exceptions),
+        reply_markup=exceptions_list_kb(exceptions, chat_type, page),
+    )
     await cb.answer("✅ Удалено")
 
 

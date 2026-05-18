@@ -210,14 +210,25 @@ def filter_type_kb(chat_type: str, mode: str, exc_count: int) -> InlineKeyboardM
     return builder.as_markup()
 
 
-def exceptions_list_kb(exceptions: list, chat_type: str) -> InlineKeyboardMarkup:
+def exceptions_list_kb(exceptions: list, chat_type: str, page: int = 0, per_page: int = 8) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    for exc in exceptions[:10]:
+    start = page * per_page
+    for exc in exceptions[start:start + per_page]:
         title = (exc.get("chat_title") or str(exc["chat_id"]))[:30]
-        builder.button(text=f"❌ {title}", callback_data=f"filters:exc:remove:{chat_type}:{exc['chat_id']}")
-    builder.button(text="➕ Добавить чат", callback_data=f"filters:exc:pick:{chat_type}")
-    builder.button(text="◀️ Назад", callback_data=f"filters:type:{chat_type}")
+        builder.button(text=f"❌ {title}", callback_data=f"filters:exc:remove:{chat_type}:{exc['chat_id']}:{page}")
     builder.adjust(1)
+    total_pages = max(1, (len(exceptions) + per_page - 1) // per_page)
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton(text="◀️", callback_data=f"filters:exc:list:{chat_type}:{page-1}"))
+    if total_pages > 1:
+        nav.append(InlineKeyboardButton(text=f"{page+1}/{total_pages}", callback_data="noop"))
+    if (page + 1) * per_page < len(exceptions):
+        nav.append(InlineKeyboardButton(text="▶️", callback_data=f"filters:exc:list:{chat_type}:{page+1}"))
+    if nav:
+        builder.row(*nav)
+    builder.row(InlineKeyboardButton(text="➕ Добавить чат", callback_data=f"filters:exc:pick:{chat_type}"))
+    builder.row(InlineKeyboardButton(text="◀️ Назад", callback_data=f"filters:type:{chat_type}"))
     return builder.as_markup()
 
 
