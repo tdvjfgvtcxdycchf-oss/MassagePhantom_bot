@@ -781,7 +781,6 @@ async def get_invite_tree() -> list[dict]:
             FROM users u
             LEFT JOIN invite_uses iu ON iu.used_by = u.user_id
             LEFT JOIN invites i ON i.code = iu.code
-            WHERE u.is_owner = 0
             ORDER BY u.created_at
         """) as cur:
             rows = await cur.fetchall()
