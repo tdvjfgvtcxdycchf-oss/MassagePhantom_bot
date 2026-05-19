@@ -3,6 +3,8 @@ services:
     image: alpine:3.19
     restart: unless-stopped
     command: sh -c "apk add --no-cache --quiet autossh openssh-client && autossh -M 0 -N -D 0.0.0.0:1082 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -i /ssh/tunnel_key root@212.118.54.205"
+    ports:
+      - "127.0.0.1:1082:1082"
     volumes:
       - /home/zolbrain/transparencybot/ssh:/ssh:ro
 
