@@ -139,6 +139,7 @@ async def init_db() -> None:
             ("ALTER TABLE users ADD COLUMN trial_until INTEGER DEFAULT 0",),
             ("ALTER TABLE users ADD COLUMN trial_expired_notified INTEGER DEFAULT 0",),
             ("ALTER TABLE users ADD COLUMN display_name TEXT",),
+            ("ALTER TABLE users ADD COLUMN premium_plus_until INTEGER DEFAULT 0",),
         ]
         for (sql,) in migrations:
             try:
@@ -207,6 +208,41 @@ async def is_premium(user_id: int) -> bool:
 async def revoke_premium(user_id: int) -> None:
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("UPDATE users SET premium_until=0 WHERE user_id=?", (user_id,))
+        await db.commit()
+
+
+async def is_premium_plus(user_id: int) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT premium_plus_until, is_owner FROM users WHERE user_id=?", (user_id,)
+        ) as cur:
+            row = await cur.fetchone()
+    if not row:
+        return False
+    plus_until, is_owner = row
+    return bool(is_owner) or bool(plus_until and plus_until > int(time.time()))
+
+
+async def set_premium_plus(user_id: int, months: int = 1) -> int:
+    now = int(time.time())
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT premium_plus_until FROM users WHERE user_id=?", (user_id,)
+        ) as cur:
+            row = await cur.fetchone()
+    base = max((row[0] or 0) if row else 0, now)
+    new_until = base + months * 30 * 86400
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET premium_plus_until=? WHERE user_id=?", (new_until, user_id)
+        )
+        await db.commit()
+    return new_until
+
+
+async def revoke_premium_plus(user_id: int) -> None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("UPDATE users SET premium_plus_until=0 WHERE user_id=?", (user_id,))
         await db.commit()
 
 

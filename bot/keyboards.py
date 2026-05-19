@@ -14,7 +14,7 @@ def consent_kb() -> InlineKeyboardMarkup:
     return builder.as_markup()
 
 
-def main_menu_kb(is_premium: bool, is_owner: bool = False) -> InlineKeyboardMarkup:
+def main_menu_kb(is_premium: bool, is_owner: bool = False, is_premium_plus: bool = False) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     if is_owner:
         builder.button(text="🔧 Админ-панель", callback_data="adm:main")
@@ -22,6 +22,8 @@ def main_menu_kb(is_premium: bool, is_owner: bool = False) -> InlineKeyboardMark
         builder.button(text="⭐ Получить Premium", callback_data="premium:info")
     else:
         builder.button(text="⚙️ Фильтры уведомлений", callback_data="filters:main")
+        if not is_premium_plus:
+            builder.button(text="🌟 Premium Plus (публичные группы)", callback_data="premium_plus:info")
     builder.button(text="ℹ️ Статус", callback_data="status")
     builder.button(text="🔌 Отключить аккаунт", callback_data="disconnect")
     builder.button(text="🗑 Удалить мои данные", callback_data="delete_data")
@@ -50,6 +52,29 @@ def premium_kb() -> InlineKeyboardMarkup:
 
 def premium_tiers() -> list[tuple[int, int, str]]:
     return _premium_tiers()
+
+
+def _premium_plus_tiers() -> list[tuple[int, int, str]]:
+    base = config.premium_plus_price
+    return [
+        (1,  base,               "1 месяц"),
+        (3,  round(base * 2.5),  "3 месяца"),
+        (6,  round(base * 4.5),  "6 месяцев"),
+        (12, round(base * 8),    "12 месяцев"),
+    ]
+
+
+def premium_plus_kb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for months, price, label in _premium_plus_tiers():
+        builder.button(text=f"🛒 {label} — {price} ⭐", callback_data=f"premium_plus:buy:{months}")
+    builder.button(text="◀️ Назад", callback_data="back_menu")
+    builder.adjust(2, 2, 1)
+    return builder.as_markup()
+
+
+def premium_plus_tiers() -> list[tuple[int, int, str]]:
+    return _premium_plus_tiers()
 
 
 # ── Админ-панель ──────────────────────────────────────────────────────────────

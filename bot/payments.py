@@ -10,7 +10,7 @@ from aiogram.types import (
 
 import db
 from config import config
-from bot.keyboards import main_menu_kb, premium_kb, premium_tiers
+from bot.keyboards import main_menu_kb, premium_kb, premium_tiers, premium_plus_kb, premium_plus_tiers
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -68,6 +68,49 @@ async def send_invoice(cb: CallbackQuery) -> None:
     await cb.answer()
 
 
+# ── Premium Plus ─────────────────────────────────────────────────────────────
+
+@router.callback_query(F.data == "premium_plus:info")
+async def premium_plus_info(cb: CallbackQuery) -> None:
+    lines = []
+    for months, price, label in premium_plus_tiers():
+        lines.append(f"• {label} — <b>{price} ⭐</b>")
+    await cb.message.edit_text(
+        "🌟 <b>Premium Plus</b>\n\n"
+        "Дополнение к Premium — мониторинг публичных групп.\n\n"
+        "<b>Что добавляет:</b>\n"
+        "• 👥 Удалённые и отредактированные сообщения в публичных группах\n\n"
+        "<b>Требует активный Premium.</b>\n\n"
+        "<b>Тарифы:</b>\n" + "\n".join(lines) + "\n\n"
+        "Оплата через Telegram Stars.",
+        reply_markup=premium_plus_kb(),
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("premium_plus:buy:"))
+async def send_plus_invoice(cb: CallbackQuery) -> None:
+    if not await db.is_premium(cb.from_user.id):
+        await cb.answer("❗ Сначала купи Premium", show_alert=True)
+        return
+    months = int(cb.data.split(":")[2])
+    tier = next(((p, l) for m, p, l in premium_plus_tiers() if m == months), None)
+    if not tier:
+        await cb.answer("Неизвестный тариф", show_alert=True)
+        return
+    price, label = tier
+    from bot.client import bot
+    await bot.send_invoice(
+        chat_id=cb.from_user.id,
+        title=f"🌟 Premium Plus — {label}",
+        description=f"Мониторинг публичных групп на {label.lower()}.",
+        payload=f"premium_plus:{months}",
+        currency="XTR",
+        prices=[LabeledPrice(label=label, amount=price)],
+    )
+    await cb.answer()
+
+
 # ── Pre-checkout ──────────────────────────────────────────────────────────────
 
 @router.pre_checkout_query()
@@ -80,28 +123,43 @@ async def pre_checkout(query: PreCheckoutQuery) -> None:
 @router.message(F.successful_payment)
 async def payment_success(msg: Message) -> None:
     user_id = msg.from_user.id
-    payload = msg.successful_payment.invoice_payload  # "premium:N"
+    payload = msg.successful_payment.invoice_payload
     charge_id = msg.successful_payment.telegram_payment_charge_id
     amount = msg.successful_payment.total_amount
 
-    months = int(payload.split(":")[1]) if ":" in payload else 1
-    tier = _tier_by_months(months)
-    label = tier[1] if tier else f"{months} мес."
+    parts = payload.split(":")
+    payment_type = parts[0]
+    months = int(parts[1]) if len(parts) > 1 else 1
 
     await db.save_payment(user_id, charge_id, amount, months)
-    expires = await db.set_premium(user_id, months=months)
-    dt = datetime.fromtimestamp(expires).strftime("%d.%m.%Y")
-    premium = await db.is_premium(user_id)
-    await msg.answer(
-        f"🎉 <b>Premium активирован!</b>\n\n"
-        f"Тариф: {label}\n"
-        f"Действует до: <b>{dt}</b>\n\n"
-        "Теперь доступно:\n"
-        "• Мониторинг групп, каналов и ботов\n"
-        "• Одноразовые (view-once) медиафайлы\n"
-        "• Фильтры уведомлений",
-        reply_markup=main_menu_kb(premium),
-    )
+
+    if payment_type == "premium_plus":
+        expires = await db.set_premium_plus(user_id, months=months)
+        dt = datetime.fromtimestamp(expires).strftime("%d.%m.%Y")
+        premium = await db.is_premium(user_id)
+        await msg.answer(
+            f"🌟 <b>Premium Plus активирован!</b>\n\n"
+            f"Действует до: <b>{dt}</b>\n\n"
+            "Теперь доступно мониторинг публичных групп.",
+            reply_markup=main_menu_kb(premium, is_premium_plus=True),
+        )
+    else:
+        tier = _tier_by_months(months)
+        label = tier[1] if tier else f"{months} мес."
+        expires = await db.set_premium(user_id, months=months)
+        dt = datetime.fromtimestamp(expires).strftime("%d.%m.%Y")
+        premium = await db.is_premium(user_id)
+        plus = await db.is_premium_plus(user_id)
+        await msg.answer(
+            f"🎉 <b>Premium активирован!</b>\n\n"
+            f"Тариф: {label}\n"
+            f"Действует до: <b>{dt}</b>\n\n"
+            "Теперь доступно:\n"
+            "• Мониторинг приватных групп и личных чатов\n"
+            "• Одноразовые (view-once) медиафайлы\n"
+            "• Фильтры уведомлений",
+            reply_markup=main_menu_kb(premium, is_premium_plus=plus),
+        )
 
 
 # ── Команды владельца ─────────────────────────────────────────────────────────

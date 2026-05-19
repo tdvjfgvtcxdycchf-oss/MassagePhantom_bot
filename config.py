@@ -13,6 +13,7 @@ class Config:
     session_name: str
     owner_id: int
     premium_price: int
+    premium_plus_price: int
     fernet_key: bytes
     proxy_url: str | None
     bot_api_url: str | None
@@ -46,6 +47,7 @@ def load_config() -> Config:
         session_name=os.getenv("SESSION_NAME", "transparency"),
         owner_id=int(os.environ["OWNER_ID"]),
         premium_price=int(os.getenv("PREMIUM_PRICE", "100")),
+        premium_plus_price=int(os.getenv("PREMIUM_PLUS_PRICE", "200")),
         fernet_key=fernet_bytes,
         proxy_url=os.getenv("PROXY_URL") or None,
         bot_api_url=os.getenv("BOT_API_URL") or None,
