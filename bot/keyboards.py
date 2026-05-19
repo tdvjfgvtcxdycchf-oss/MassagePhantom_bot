@@ -26,9 +26,16 @@ def main_menu_kb(is_premium: bool, is_owner: bool = False, is_premium_plus: bool
             builder.button(text="🌟 Premium Plus (публичные группы)", callback_data="premium_plus:info")
         else:
             builder.button(text="🌐 Публичные группы", callback_data="pubgroups:list")
-    builder.button(text="ℹ️ Статус", callback_data="status")
+    builder.button(text="⚙️ Аккаунт", callback_data="account_settings")
+    builder.adjust(1)
+    return builder.as_markup()
+
+
+def account_settings_kb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
     builder.button(text="🔌 Отключить аккаунт", callback_data="disconnect")
     builder.button(text="🗑 Удалить мои данные", callback_data="delete_data")
+    builder.button(text="◀️ Назад", callback_data="back_menu")
     builder.adjust(1)
     return builder.as_markup()
 

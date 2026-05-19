@@ -13,7 +13,7 @@ from telethon.errors import (
 
 import db
 from config import config
-from bot.keyboards import consent_kb, main_menu_kb, status_kb, confirm_delete_kb, cancel_kb, request_phone_kb, remove_kb
+from bot.keyboards import consent_kb, main_menu_kb, account_settings_kb, status_kb, confirm_delete_kb, cancel_kb, request_phone_kb, remove_kb
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -72,10 +72,12 @@ async def cmd_start(msg: Message, state: FSMContext) -> None:
     session = await db.get_session(user_id)
     if session:
         premium = await db.is_premium(user_id)
+        premium_plus = await db.is_premium_plus(user_id)
+        header = await _menu_header(user_id)
         await _send_menu(
             msg,
-            "✅ <b>Мониторинг активен.</b> Бот следит за твоими чатами.",
-            main_menu_kb(premium, is_owner=is_owner),
+            header,
+            main_menu_kb(premium, is_owner=is_owner, is_premium_plus=premium_plus),
         )
     else:
         await msg.answer(
@@ -276,6 +278,7 @@ async def cmd_menu(msg: Message) -> None:
     user_id = msg.from_user.id
     await db.ensure_user(user_id)
     premium = await db.is_premium(user_id)
+    premium_plus = await db.is_premium_plus(user_id)
     owner = user_id == config.owner_id
     session = await db.get_session(user_id)
     if not session:
@@ -283,7 +286,8 @@ async def cmd_menu(msg: Message) -> None:
             "🔌 Аккаунт не подключён. Используй /start для подключения."
         )
         return
-    await _send_menu(msg, "Главное меню:", main_menu_kb(premium, is_owner=owner))
+    header = await _menu_header(user_id)
+    await _send_menu(msg, header, main_menu_kb(premium, is_owner=owner, is_premium_plus=premium_plus))
 
 
 @router.message(Command("status"))
@@ -324,10 +328,12 @@ async def cmd_status(event, **_) -> None:
 async def back_menu(cb: CallbackQuery) -> None:
     user_id = cb.from_user.id
     premium = await db.is_premium(user_id)
+    premium_plus = await db.is_premium_plus(user_id)
     owner = user_id == config.owner_id
-    kb = main_menu_kb(premium, is_owner=owner)
+    header = await _menu_header(user_id)
+    kb = main_menu_kb(premium, is_owner=owner, is_premium_plus=premium_plus)
     try:
-        await cb.message.edit_text("Главное меню:", reply_markup=kb)
+        await cb.message.edit_text(header, reply_markup=kb)
         _menu_msgs[user_id] = (cb.message.chat.id, cb.message.message_id)
     except Exception:
         from bot.client import bot as _bot
@@ -335,8 +341,21 @@ async def back_menu(cb: CallbackQuery) -> None:
             await cb.message.delete()
         except Exception:
             pass
-        sent = await _bot.send_message(cb.message.chat.id, "Главное меню:", reply_markup=kb)
+        sent = await _bot.send_message(cb.message.chat.id, header, reply_markup=kb)
         _menu_msgs[user_id] = (cb.message.chat.id, sent.message_id)
+    await cb.answer()
+
+
+# ── Account settings ──────────────────────────────────────────────────────────
+
+@router.callback_query(F.data == "account_settings")
+async def account_settings(cb: CallbackQuery) -> None:
+    user_id = cb.from_user.id
+    await cb.message.edit_text(
+        f"⚙️ <b>Настройки аккаунта</b>\n\n"
+        f"🆔 Ваш ID: <code>{user_id}</code>",
+        reply_markup=account_settings_kb(),
+    )
     await cb.answer()
 
 
@@ -495,6 +514,26 @@ _temp_clients: dict[int, object] = {}
 
 # ── Трекинг последнего меню-сообщения для авто-удаления ──────────────────────
 _menu_msgs: dict[int, tuple[int, int]] = {}  # user_id → (chat_id, message_id)
+
+
+async def _menu_header(user_id: int) -> str:
+    from userbot.client import get_client
+    session = await db.get_session(user_id)
+    active = get_client(user_id) is not None
+    until = await db.get_premium_until(user_id)
+    days = await db.get_days_left(user_id)
+    premium_plus = await db.is_premium_plus(user_id)
+
+    conn = "🟢 Подключён" if (session and active) else ("🟡 Не активен" if session else "🔴 Не подключён")
+
+    if until == -1:
+        plan = "⭐ Premium навсегда"
+    elif days > 0:
+        plan = f"{'🌟 Premium Plus' if premium_plus else '⭐ Premium'} · {days} дн."
+    else:
+        plan = "🆓 Бесплатный"
+
+    return f"{conn} · {plan}\n\n<b>Главное меню:</b>"
 
 
 async def _send_menu(msg: Message, text: str, markup) -> None:
