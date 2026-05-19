@@ -149,6 +149,7 @@ async def init_db() -> None:
             ("ALTER TABLE users ADD COLUMN trial_expired_notified INTEGER DEFAULT 0",),
             ("ALTER TABLE users ADD COLUMN display_name TEXT",),
             ("ALTER TABLE users ADD COLUMN premium_plus_until INTEGER DEFAULT 0",),
+            ("ALTER TABLE promo_codes ADD COLUMN promo_type TEXT DEFAULT 'premium'",),
         ]
         for (sql,) in migrations:
             try:
@@ -791,11 +792,11 @@ async def use_promo(code: str, user_id: int) -> dict | None:
     return promo
 
 
-async def create_promo(code: str, months: int, max_uses: int, expires_at: int | None = None) -> None:
+async def create_promo(code: str, months: int, max_uses: int, expires_at: int | None = None, promo_type: str = "premium") -> None:
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            "INSERT OR REPLACE INTO promo_codes (code, months, max_uses, used_count, created_at, expires_at) VALUES (?,?,?,0,?,?)",
-            (code.upper(), months, max_uses, int(time.time()), expires_at),
+            "INSERT OR REPLACE INTO promo_codes (code, months, max_uses, used_count, created_at, expires_at, promo_type) VALUES (?,?,?,0,?,?,?)",
+            (code.upper(), months, max_uses, int(time.time()), expires_at, promo_type),
         )
         await db.commit()
 

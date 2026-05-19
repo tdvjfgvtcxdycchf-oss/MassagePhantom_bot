@@ -108,11 +108,20 @@ def admin_promos_kb(promos: list) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for p in promos:
         uses = f"{p['used_count']}/{p['max_uses']}"
-        label = f"🎟 {p['code']} · {p['months']}мес · {uses}"
+        icon = "🌟" if p.get("promo_type") == "premium_plus" else "⭐"
+        label = f"{icon} {p['code']} · {p['months']}мес · {uses}"
         builder.button(text=label, callback_data=f"adm:promo:del:{p['code']}")
     builder.button(text="➕ Создать промокод", callback_data="adm:promo:create")
     builder.button(text="◀️ Назад", callback_data="adm:main")
     builder.adjust(1)
+    return builder.as_markup()
+
+
+def promo_type_kb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="⭐ Premium", callback_data="adm:promo:type:premium")
+    builder.button(text="🌟 Premium Plus", callback_data="adm:promo:type:premium_plus")
+    builder.adjust(2)
     return builder.as_markup()
 
 

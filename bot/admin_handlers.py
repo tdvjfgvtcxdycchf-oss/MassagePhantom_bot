@@ -12,7 +12,7 @@ from config import config
 from bot.keyboards import (
     admin_main_kb, admin_users_kb, admin_user_kb,
     admin_broadcast_kb, admin_bc_confirm_kb,
-    admin_promos_kb, promo_months_kb,
+    admin_promos_kb, promo_months_kb, promo_type_kb,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,7 @@ class AdminState(StatesGroup):
     waiting_broadcast_text = State()
     waiting_search_id = State()
     waiting_promo_code = State()
+    waiting_promo_type = State()
     waiting_promo_months = State()
     waiting_promo_uses = State()
 
@@ -396,8 +397,20 @@ async def adm_promo_code_input(msg: Message, state: FSMContext) -> None:
         await msg.answer("❌ Промокод должен содержать только буквы, цифры, - или _. Попробуй снова:")
         return
     await state.update_data(promo_code=code)
+    await state.set_state(AdminState.waiting_promo_type)
+    await msg.answer(f"✅ Код: <code>{code}</code>\n\nВыбери тип подписки:", reply_markup=promo_type_kb())
+
+
+@router.callback_query(F.data.startswith("adm:promo:type:"), AdminState.waiting_promo_type)
+async def adm_promo_type(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _owner_only(cb.from_user.id):
+        return
+    promo_type = cb.data.split(":")[3]
+    await state.update_data(promo_type=promo_type)
     await state.set_state(AdminState.waiting_promo_months)
-    await msg.answer(f"✅ Код: <code>{code}</code>\n\nВыбери срок действия:", reply_markup=promo_months_kb())
+    type_label = "🌟 Premium Plus" if promo_type == "premium_plus" else "⭐ Premium"
+    await cb.message.answer(f"Тип: <b>{type_label}</b>\n\nВыбери срок действия:", reply_markup=promo_months_kb())
+    await cb.answer()
 
 
 @router.callback_query(F.data.startswith("adm:promo:months:"), AdminState.waiting_promo_months)
@@ -431,13 +444,16 @@ async def adm_promo_uses(msg: Message, state: FSMContext) -> None:
     data = await state.get_data()
     code = data["promo_code"]
     months = data["promo_months"]
+    promo_type = data.get("promo_type", "premium")
     await state.clear()
 
-    await db.create_promo(code, months, max_uses)
+    await db.create_promo(code, months, max_uses, promo_type=promo_type)
     uses_label = "безлимит" if max_uses == 999 else str(max_uses)
+    type_label = "🌟 Premium Plus" if promo_type == "premium_plus" else "⭐ Premium"
     await msg.answer(
         f"✅ <b>Промокод создан!</b>\n\n"
         f"Код: <code>{code}</code>\n"
+        f"Тип: {type_label}\n"
         f"Срок: {months} мес.\n"
         f"Использований: {uses_label}",
         reply_markup=admin_main_kb(),

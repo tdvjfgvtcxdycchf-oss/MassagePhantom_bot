@@ -497,11 +497,17 @@ async def promo_code_input(msg: Message, state: FSMContext) -> None:
     await state.clear()
 
     months = promo["months"]
-    new_until = await db.set_premium(user_id, months)
+    promo_type = promo.get("promo_type", "premium")
+    if promo_type == "premium_plus":
+        new_until = await db.set_premium_plus(user_id, months=months)
+        label = "🌟 Premium Plus"
+    else:
+        new_until = await db.set_premium(user_id, months)
+        label = "⭐ Premium"
     dt = datetime.fromtimestamp(new_until).strftime("%d.%m.%Y")
     await msg.answer(
         f"✅ <b>Промокод активирован!</b>\n\n"
-        f"Начислено: <b>{months} мес. Premium</b>\n"
+        f"Начислено: <b>{months} мес. {label}</b>\n"
         f"Доступ активен до {dt}.",
     )
 
