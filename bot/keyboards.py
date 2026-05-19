@@ -22,10 +22,13 @@ def main_menu_kb(is_premium: bool, is_owner: bool = False, is_premium_plus: bool
         builder.button(text="⭐ Получить Premium", callback_data="premium:info")
     else:
         # builder.button(text="⚙️ Фильтры уведомлений", callback_data="filters:main")
+        builder.button(text="⭐ Продлить Premium", callback_data="premium:info")
         if not is_premium_plus:
             builder.button(text="🌟 Premium Plus (публичные группы)", callback_data="premium_plus:info")
         else:
             builder.button(text="🌐 Публичные группы", callback_data="pubgroups:list")
+    builder.button(text="🔗 Пригласить друга (+7 дней)", callback_data="invite:get_link")
+    builder.button(text="🎟 Ввести промокод", callback_data="promo:enter")
     builder.button(text="⚙️ Аккаунт", callback_data="account_settings")
     builder.adjust(1)
     return builder.as_markup()
