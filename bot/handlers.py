@@ -435,44 +435,37 @@ async def invite_get_link(cb: CallbackQuery) -> None:
     me = await _bot.get_me()
     link = f"https://t.me/{me.username}?start=ref_{code}"
 
-    # Текст для друга (уходит через share)
-    share_text = (
-        "👁 Твой друг приглашает тебя в Massage Phantom\n\n"
+    # Подпись к фото — это то, что увидит друг при пересылке
+    forward_caption = (
+        "👁 <b>Твой друг приглашает тебя в Massage Phantom</b>\n\n"
         "Бот, который запоминает то, что другие хотят скрыть:\n"
         "• 🗑 удалённые сообщения\n"
         "• ✏️ отредактированные сообщения\n"
         "• 👁 одноразовые медиа\n\n"
         "Подключи свой аккаунт Telegram — и ничего не упустишь.\n\n"
-        "🎁 За регистрацию по этой ссылке твой друг получит +7 дней бесплатно"
-    )
-
-    import urllib.parse
-    share_url = f"https://t.me/share/url?url={urllib.parse.quote(link)}&text={urllib.parse.quote(share_text)}"
-
-    # Текст для инвайтера
-    caption = (
-        "🔗 <b>Твоя реферальная ссылка</b>\n\n"
-        "За каждого друга, который подключится по ней — ты получишь <b>+7 дней</b> бесплатно.\n\n"
-        "Нажми кнопку ниже, чтобы отправить другу 👇"
+        f"🎁 +7 дней бесплатно при регистрации\n"
+        f"👉 {link}"
     )
 
     from pathlib import Path
     from aiogram.utils.keyboard import InlineKeyboardBuilder as _IKB
     from aiogram.types import InlineKeyboardButton
+
     kb = _IKB()
-    kb.row(InlineKeyboardButton(text="📤 Отправить другу", url=share_url))
     kb.row(InlineKeyboardButton(text="◀️ В меню", callback_data="back_menu"))
+
+    await cb.message.answer("📤 <b>Перешли сообщение ниже другу</b> — в нём уже есть картинка и ссылка 👇")
 
     promo = Path("/app/promo.jpg")
     if promo.exists():
         from aiogram.types import FSInputFile
         try:
-            await cb.message.answer_photo(FSInputFile(str(promo)), caption=caption, reply_markup=kb.as_markup())
+            await cb.message.answer_photo(FSInputFile(str(promo)), caption=forward_caption, reply_markup=kb.as_markup())
         except Exception as e:
             logger.error("Не удалось отправить promo фото: %s", e)
-            await cb.message.answer(caption, reply_markup=kb.as_markup())
+            await cb.message.answer(forward_caption, reply_markup=kb.as_markup())
     else:
-        await cb.message.answer(caption, reply_markup=kb.as_markup())
+        await cb.message.answer(forward_caption, reply_markup=kb.as_markup())
     await cb.answer()
 
 
