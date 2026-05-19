@@ -10,6 +10,7 @@ from bot.handlers import router as main_router
 from bot.payments import router as payments_router
 from bot.filter_handlers import router as filters_router
 from bot.admin_handlers import router as admin_router
+from bot.public_groups import router as pubgroups_router
 import db
 import userbot.client as ub
 from config import config
@@ -102,6 +103,7 @@ def main() -> None:
     dp.include_router(payments_router)
     dp.include_router(filters_router)
     dp.include_router(admin_router)
+    dp.include_router(pubgroups_router)
 
     dp.startup.register(on_startup)
     dp.shutdown.register(on_shutdown)

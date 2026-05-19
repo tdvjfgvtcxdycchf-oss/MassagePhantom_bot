@@ -21,9 +21,11 @@ def main_menu_kb(is_premium: bool, is_owner: bool = False, is_premium_plus: bool
     if not is_premium:
         builder.button(text="⭐ Получить Premium", callback_data="premium:info")
     else:
-        builder.button(text="⚙️ Фильтры уведомлений", callback_data="filters:main")
+        # builder.button(text="⚙️ Фильтры уведомлений", callback_data="filters:main")
         if not is_premium_plus:
             builder.button(text="🌟 Premium Plus (публичные группы)", callback_data="premium_plus:info")
+        else:
+            builder.button(text="🌐 Публичные группы", callback_data="pubgroups:list")
     builder.button(text="ℹ️ Статус", callback_data="status")
     builder.button(text="🔌 Отключить аккаунт", callback_data="disconnect")
     builder.button(text="🗑 Удалить мои данные", callback_data="delete_data")

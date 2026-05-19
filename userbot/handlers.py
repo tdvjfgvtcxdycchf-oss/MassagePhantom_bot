@@ -184,6 +184,8 @@ def register(client: TelegramClient, owner_id: int) -> None:
         if chat_type == "group" and getattr(chat, 'username', None):
             if not await db.is_premium_plus(owner_id):
                 return
+            if not await db.is_monitored_public_group(owner_id, event.chat_id):
+                return
 
         # get_sender() надёжнее event.sender_id — в некоторых случаях
         # (каналы, боты) sender_id может вернуть peer_id вместо from_id
@@ -240,8 +242,11 @@ def register(client: TelegramClient, owner_id: int) -> None:
 
         if chat_type == "group":
             _chat = await event.get_chat()
-            if getattr(_chat, 'username', None) and not await db.is_premium_plus(owner_id):
-                return
+            if getattr(_chat, 'username', None):
+                if not await db.is_premium_plus(owner_id):
+                    return
+                if not await db.is_monitored_public_group(owner_id, event.chat_id):
+                    return
 
         try:
             _s = await event.get_sender()

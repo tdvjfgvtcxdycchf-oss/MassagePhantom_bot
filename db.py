@@ -132,6 +132,15 @@ async def init_db() -> None:
                 used_at INTEGER NOT NULL,
                 PRIMARY KEY (code, user_id)
             );
+
+            CREATE TABLE IF NOT EXISTS public_group_monitors (
+                owner_id      INTEGER NOT NULL,
+                chat_id       INTEGER NOT NULL,
+                chat_username TEXT NOT NULL,
+                chat_title    TEXT NOT NULL DEFAULT '',
+                added_at      INTEGER NOT NULL,
+                PRIMARY KEY (owner_id, chat_id)
+            );
         """)
         # Миграции: добавляем новые колонки если их нет
         migrations = [
@@ -823,6 +832,60 @@ async def get_invite_tree() -> list[dict]:
         """) as cur:
             rows = await cur.fetchall()
     return [dict(r) for r in rows]
+
+
+# ── Публичные группы Premium Plus ────────────────────────────────────────────
+
+PUBLIC_GROUP_LIMIT = 3
+
+
+async def get_public_groups(owner_id: int) -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute(
+            "SELECT * FROM public_group_monitors WHERE owner_id=? ORDER BY added_at",
+            (owner_id,),
+        ) as cur:
+            rows = await cur.fetchall()
+    return [dict(r) for r in rows]
+
+
+async def add_public_group(owner_id: int, chat_id: int, chat_username: str, chat_title: str) -> bool:
+    """Добавляет группу. Возвращает False если лимит исчерпан или уже есть."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT COUNT(*) FROM public_group_monitors WHERE owner_id=?", (owner_id,)
+        ) as cur:
+            count = (await cur.fetchone())[0]
+        if count >= PUBLIC_GROUP_LIMIT:
+            return False
+        try:
+            await db.execute(
+                "INSERT INTO public_group_monitors (owner_id, chat_id, chat_username, chat_title, added_at) VALUES (?,?,?,?,?)",
+                (owner_id, chat_id, chat_username, chat_title, int(time.time())),
+            )
+            await db.commit()
+            return True
+        except aiosqlite.IntegrityError:
+            return False
+
+
+async def remove_public_group(owner_id: int, chat_id: int) -> None:
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "DELETE FROM public_group_monitors WHERE owner_id=? AND chat_id=?",
+            (owner_id, chat_id),
+        )
+        await db.commit()
+
+
+async def is_monitored_public_group(owner_id: int, chat_id: int) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT 1 FROM public_group_monitors WHERE owner_id=? AND chat_id=?",
+            (owner_id, chat_id),
+        ) as cur:
+            return await cur.fetchone() is not None
 
 
 # ── Заглушённые чаты (legacy, не используется в UI) ──────────────────────────
