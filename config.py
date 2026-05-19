@@ -15,6 +15,7 @@ class Config:
     premium_price: int
     fernet_key: bytes
     proxy_url: str | None
+    bot_api_url: str | None
     webhook_host: str
 
 
@@ -47,6 +48,7 @@ def load_config() -> Config:
         premium_price=int(os.getenv("PREMIUM_PRICE", "100")),
         fernet_key=fernet_bytes,
         proxy_url=os.getenv("PROXY_URL") or None,
+        bot_api_url=os.getenv("BOT_API_URL") or None,
         webhook_host=os.environ["WEBHOOK_HOST"],
     )
 
