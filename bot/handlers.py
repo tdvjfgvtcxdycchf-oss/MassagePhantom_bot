@@ -466,7 +466,11 @@ async def invite_get_link(cb: CallbackQuery) -> None:
     promo = Path("/app/promo.jpg")
     if promo.exists():
         from aiogram.types import FSInputFile
-        await cb.message.answer_photo(FSInputFile(str(promo)), caption=caption, reply_markup=kb.as_markup())
+        try:
+            await cb.message.answer_photo(FSInputFile(str(promo)), caption=caption, reply_markup=kb.as_markup())
+        except Exception as e:
+            logger.error("Не удалось отправить promo фото: %s", e)
+            await cb.message.answer(caption, reply_markup=kb.as_markup())
     else:
         await cb.message.answer(caption, reply_markup=kb.as_markup())
     await cb.answer()
