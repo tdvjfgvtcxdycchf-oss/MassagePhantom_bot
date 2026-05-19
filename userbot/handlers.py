@@ -173,14 +173,22 @@ def register(client: TelegramClient, owner_id: int) -> None:
         if not msg or msg.out:
             return
 
+        chat_type = _chat_type(event)
+
+        # Только личка и непубличные группы
+        if chat_type == "channel":
+            return
+
+        chat = await event.get_chat()
+
+        if chat_type == "group" and getattr(chat, 'username', None):
+            return
+
         # get_sender() надёжнее event.sender_id — в некоторых случаях
         # (каналы, боты) sender_id может вернуть peer_id вместо from_id
         sender = await event.get_sender()
         if getattr(sender, 'id', None) == _bot_id:
             return
-
-        chat_type = _chat_type(event)
-        chat = await event.get_chat()
 
         from_username = getattr(sender, "username", None)
         from_name = getattr(sender, "first_name", None) or getattr(sender, "title", "") or ""
@@ -222,6 +230,18 @@ def register(client: TelegramClient, owner_id: int) -> None:
         msg = event.message
         if not msg or msg.out:
             return
+
+        chat_type = _chat_type(event)
+
+        # Только личка и непубличные группы
+        if chat_type == "channel":
+            return
+
+        if chat_type == "group":
+            _chat = await event.get_chat()
+            if getattr(_chat, 'username', None):
+                return
+
         try:
             _s = await event.get_sender()
             _sid = getattr(_s, 'id', event.sender_id)
@@ -230,7 +250,6 @@ def register(client: TelegramClient, owner_id: int) -> None:
         if _sid == _bot_id:
             return
 
-        chat_type = _chat_type(event)
         logger.info("on_edit owner=%s chat_id=%s msg_id=%s is_private=%s is_group=%s is_channel=%s chat_type=%s",
                     owner_id, event.chat_id, msg.id, event.is_private, event.is_group, event.is_channel, chat_type)
         if not await _can_notify(owner_id, chat_type, event.chat_id):
