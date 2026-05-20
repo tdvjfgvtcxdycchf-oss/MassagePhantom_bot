@@ -18,6 +18,8 @@ from bot.keyboards import consent_kb, main_menu_kb, account_settings_kb, status_
 logger = logging.getLogger(__name__)
 router = Router()
 
+BOT_NAME = "Massage Phantom"
+
 CONSENT_TEXT = (
     f"👋 <b>Добро пожаловать в {BOT_NAME}!</b>\n\n"
     "Этот бот использует технологию <b>юзербота</b> — он подключается к твоему аккаунту Telegram и работает в фоне от твоего имени.\n\n"
@@ -35,8 +37,6 @@ CONSENT_TEXT = (
     "<i>Нажимая «Принимаю», ты соглашаешься с условиями обработки данных.</i>"
 )
 
-
-BOT_NAME = "Massage Phantom"
 
 CONNECT_ACCOUNT_TEXT = (
     "📱 <b>Укажи номер телефона — на его основе будет создан юзербот</b>\n"
