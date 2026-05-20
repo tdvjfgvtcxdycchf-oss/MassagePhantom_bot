@@ -31,7 +31,7 @@ async def premium_info(cb: CallbackQuery) -> None:
     for months, price, label in premium_tiers():
         lines.append(f"• {label} — <b>{price} ⭐</b>")
     await cb.message.edit_text(
-        "⭐ <b>Premium</b>\n\n"
+        "⭐ <b>Pro</b>\n\n"
         "Видишь удалённые и отредактированные сообщения в личных переписках и небольших личных группах.\n\n"
         "<b>Что включено:</b>\n"
         "• 🗑 Полный текст удалённых сообщений\n"
@@ -57,7 +57,7 @@ async def send_invoice(cb: CallbackQuery) -> None:
     from bot.client import bot
     await bot.send_invoice(
         chat_id=cb.from_user.id,
-        title=f"⭐ Premium — {label}",
+        title=f"⭐ Pro — {label}",
         description=f"Мониторинг групп, каналов, ботов и одноразовых сообщений на {label.lower()}.",
         payload=f"premium:{months}",
         currency="XTR",
@@ -66,7 +66,7 @@ async def send_invoice(cb: CallbackQuery) -> None:
     await cb.answer()
 
 
-# ── Premium Plus ─────────────────────────────────────────────────────────────
+# ── Pro Plus ─────────────────────────────────────────────────────────────
 
 @router.callback_query(F.data == "premium_plus:info")
 async def premium_plus_info(cb: CallbackQuery) -> None:
@@ -74,12 +74,12 @@ async def premium_plus_info(cb: CallbackQuery) -> None:
     for months, price, label in premium_plus_tiers():
         lines.append(f"• {label} — <b>{price} ⭐</b>")
     await cb.message.edit_text(
-        "🌟 <b>Premium Plus</b>\n\n"
+        "🌟 <b>Pro Plus</b>\n\n"
         "Расширение для тех, кто хочет больше.\n\n"
         "<b>Что добавляет:</b>\n"
         "• Видишь удалённые и отредактированные в больших группах-сообществах и каналах\n"
         "• До <b>3 чатов</b> на выбор — добавляешь сам\n\n"
-        "<b>Требует активный Premium.</b>\n\n"
+        "<b>Требует активный Pro.</b>\n\n"
         "<b>Тарифы:</b>\n" + "\n".join(lines) + "\n\n"
         "Оплата через Telegram Stars.",
         reply_markup=premium_plus_kb(),
@@ -90,7 +90,7 @@ async def premium_plus_info(cb: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith("premium_plus:buy:"))
 async def send_plus_invoice(cb: CallbackQuery) -> None:
     if not await db.is_premium(cb.from_user.id):
-        await cb.answer("❗ Сначала купи Premium", show_alert=True)
+        await cb.answer("❗ Сначала купи Pro", show_alert=True)
         return
     months = int(cb.data.split(":")[2])
     tier = next(((p, l) for m, p, l in premium_plus_tiers() if m == months), None)
@@ -101,7 +101,7 @@ async def send_plus_invoice(cb: CallbackQuery) -> None:
     from bot.client import bot
     await bot.send_invoice(
         chat_id=cb.from_user.id,
-        title=f"🌟 Premium Plus — {label}",
+        title=f"🌟 Pro Plus — {label}",
         description=f"Удалённые и отредактированные в группах-сообществах и каналах на {label.lower()}.",
         payload=f"premium_plus:{months}",
         currency="XTR",
@@ -140,7 +140,7 @@ async def payment_success(msg: Message) -> None:
         dt = datetime.fromtimestamp(expires).strftime("%d.%m.%Y")
         premium = await db.is_premium(user_id)
         await msg.answer(
-            f"🌟 <b>Premium Plus активирован!</b>\n\n"
+            f"🌟 <b>Pro Plus активирован!</b>\n\n"
             f"Действует до: <b>{dt}</b>\n\n"
             "Теперь можешь добавить до 3 больших групп или каналов — и видеть удалённые и отредактированные сообщения и в них.",
             reply_markup=main_menu_kb(premium, is_premium_plus=True),
@@ -153,7 +153,7 @@ async def payment_success(msg: Message) -> None:
         premium = await db.is_premium(user_id)
         plus = await db.is_premium_plus(user_id)
         await msg.answer(
-            f"🎉 <b>Premium активирован!</b>\n\n"
+            f"🎉 <b>Pro активирован!</b>\n\n"
             f"Тариф: {label}\n"
             f"Действует до: <b>{dt}</b>\n\n"
             "Теперь доступно:\n"
@@ -187,12 +187,12 @@ async def cmd_give_premium(msg: Message) -> None:
     await db.ensure_user(target_id)
     expires = await db.set_premium(target_id, months=months)
     dt = datetime.fromtimestamp(expires).strftime("%d.%m.%Y")
-    await msg.answer(f"✅ Premium выдан пользователю <code>{target_id}</code> до {dt}")
+    await msg.answer(f"✅ Pro выдан пользователю <code>{target_id}</code> до {dt}")
     try:
         from bot.client import bot
         await bot.send_message(
             target_id,
-            f"🎁 Вам выдан Premium на {months} мес. (до {dt})!\n\nНажми /start для обновления меню.",
+            f"🎁 Вам выдан Pro на {months} мес. (до {dt})!\n\nНажми /start для обновления меню.",
         )
     except Exception:
         pass
@@ -212,7 +212,7 @@ async def cmd_revoke_premium(msg: Message) -> None:
         await msg.answer("user_id должен быть числом")
         return
     await db.revoke_premium(target_id)
-    await msg.answer(f"✅ Premium отозван у пользователя <code>{target_id}</code>")
+    await msg.answer(f"✅ Pro отозван у пользователя <code>{target_id}</code>")
 
 
 @router.message(Command("refund"))
@@ -249,7 +249,7 @@ async def cmd_refund(msg: Message) -> None:
         try:
             await bot.send_message(
                 target_id,
-                f"💫 Вам возвращено {payment['amount']} Stars. Premium деактивирован.",
+                f"💫 Вам возвращено {payment['amount']} Stars. Pro деактивирован.",
             )
         except Exception:
             pass

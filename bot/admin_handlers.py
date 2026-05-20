@@ -22,7 +22,7 @@ PER_PAGE = 10
 
 STATUS_LABEL = {
     "owner":   "♾️ Владелец",
-    "premium": "⭐ Premium",
+    "premium": "⭐ Pro",
     "trial":   "🎁 Пробный",
     "free":    "🆓 Бесплатный",
 }
@@ -69,7 +69,7 @@ async def _show_dashboard(msg: Message, edit: bool = False) -> None:
         f"👥 Пользователей: <b>{s['total']}</b>  (+{s['new_today']} сегодня)\n"
         f"🟢 Активных сессий: <b>{active}</b> / {s['sessions']}\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
-        f"⭐ Premium: <b>{s['premium']}</b>\n"
+        f"⭐ Pro: <b>{s['premium']}</b>\n"
         f"🎁 Пробный: <b>{s['trial']}</b>\n"
         f"🆓 Бесплатных: <b>{s['free']}</b>\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
@@ -143,7 +143,7 @@ async def noop_cb(cb: CallbackQuery) -> None:
     await cb.answer()
 
 
-# ── Выдать Premium ────────────────────────────────────────────────────────────
+# ── Выдать Pro ────────────────────────────────────────────────────────────
 
 @router.callback_query(F.data.startswith("adm:give:"))
 async def adm_give_start(cb: CallbackQuery, state: FSMContext) -> None:
@@ -178,12 +178,12 @@ async def adm_give_months(msg: Message, state: FSMContext) -> None:
 
     expires = await db.set_premium(target_id, months=months)
     dt = datetime.fromtimestamp(expires).strftime("%d.%m.%Y")
-    await msg.answer(f"✅ Premium выдан <code>{target_id}</code> на {months} мес. до {dt}")
+    await msg.answer(f"✅ Pro выдан <code>{target_id}</code> на {months} мес. до {dt}")
     try:
         from bot.client import bot
         await bot.send_message(
             target_id,
-            f"🎁 Тебе выдан Premium на {months} мес. (до {dt})!"
+            f"🎁 Тебе выдан Pro на {months} мес. (до {dt})!"
         )
     except Exception:
         pass
@@ -202,7 +202,7 @@ async def adm_reset_days(cb: CallbackQuery) -> None:
     await cb.answer("✅ Дни сброшены — пользователь в бесплатном режиме", show_alert=True)
 
 
-# ── Отозвать Premium ──────────────────────────────────────────────────────────
+# ── Отозвать Pro ──────────────────────────────────────────────────────────
 
 @router.callback_query(F.data.startswith("adm:revoke:"))
 async def adm_revoke(cb: CallbackQuery) -> None:
@@ -212,7 +212,7 @@ async def adm_revoke(cb: CallbackQuery) -> None:
     await db.revoke_premium(user_id)
     text, has_session = await _render_user_detail(user_id)
     await cb.message.edit_text(text, reply_markup=admin_user_kb(user_id, has_session))
-    await cb.answer("✅ Premium отозван", show_alert=True)
+    await cb.answer("✅ Pro отозван", show_alert=True)
 
 
 # ── Вернуть Stars ─────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ async def adm_refund(cb: CallbackQuery) -> None:
         await db.mark_refunded(payment["charge_id"])
         await db.revoke_premium(user_id)
         try:
-            await bot.send_message(user_id, f"💫 Тебе возвращено {payment['amount']} Stars. Premium деактивирован.")
+            await bot.send_message(user_id, f"💫 Тебе возвращено {payment['amount']} Stars. Pro деактивирован.")
         except Exception:
             pass
         text, has_session = await _render_user_detail(user_id)
@@ -301,7 +301,7 @@ async def adm_bc_select_target(cb: CallbackQuery, state: FSMContext) -> None:
     if not _owner_only(cb.from_user.id):
         return
     target = cb.data.split(":")[2]
-    labels = {"all": "всем", "premium": "Premium", "trial": "Trial", "free": "бесплатным"}
+    labels = {"all": "всем", "premium": "Pro", "trial": "Trial", "free": "бесплатным"}
     await state.update_data(bc_target=target)
     await state.set_state(AdminState.waiting_broadcast_text)
     await cb.message.answer(
@@ -422,7 +422,7 @@ async def adm_promo_type(cb: CallbackQuery, state: FSMContext) -> None:
     promo_type = cb.data.split(":")[3]
     await state.update_data(promo_type=promo_type)
     await state.set_state(AdminState.waiting_promo_months)
-    type_label = "🌟 Premium Plus" if promo_type == "premium_plus" else "⭐ Premium"
+    type_label = "🌟 Pro Plus" if promo_type == "premium_plus" else "⭐ Pro"
     await cb.message.answer(f"Тип: <b>{type_label}</b>\n\nВыбери срок действия:", reply_markup=promo_months_kb())
     await cb.answer()
 
@@ -464,7 +464,7 @@ async def adm_promo_uses(msg: Message, state: FSMContext) -> None:
 
     await db.create_promo(code, months, max_uses, promo_type=promo_type)
     uses_label = "безлимит" if max_uses == 999 else str(max_uses)
-    type_label = "🌟 Premium Plus" if promo_type == "premium_plus" else "⭐ Premium"
+    type_label = "🌟 Pro Plus" if promo_type == "premium_plus" else "⭐ Pro"
     await msg.answer(
         f"✅ <b>Промокод создан!</b>\n\n"
         f"Код: <code>{code}</code>\n"

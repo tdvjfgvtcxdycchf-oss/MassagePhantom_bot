@@ -22,12 +22,12 @@ def main_menu_kb(is_premium: bool, is_owner: bool = False, is_premium_plus: bool
     builder.button(text="🎟 Ввести промокод", callback_data="promo:enter")
     builder.button(text="🔗 Пригласить друга (+7 дней)", callback_data="invite:get_link")
     if not is_premium:
-        builder.button(text="⭐ Получить Premium", callback_data="premium:info")
+        builder.button(text="⭐ Получить Pro", callback_data="premium:info")
     else:
         # builder.button(text="⚙️ Фильтры уведомлений", callback_data="filters:main")
-        builder.button(text="⭐ Продлить Premium", callback_data="premium:info")
+        builder.button(text="⭐ Продлить Pro", callback_data="premium:info")
         if not is_premium_plus:
-            builder.button(text="🌟 Premium Plus (группы и каналы)", callback_data="premium_plus:info")
+            builder.button(text="🌟 Pro Plus (группы и каналы)", callback_data="premium_plus:info")
         else:
             builder.button(text="🌐 Мои чаты", callback_data="pubgroups:list")
     builder.adjust(1)
@@ -119,8 +119,8 @@ def admin_promos_kb(promos: list) -> InlineKeyboardMarkup:
 
 def promo_type_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.button(text="⭐ Premium", callback_data="adm:promo:type:premium")
-    builder.button(text="🌟 Premium Plus", callback_data="adm:promo:type:premium_plus")
+    builder.button(text="⭐ Pro", callback_data="adm:promo:type:premium")
+    builder.button(text="🌟 Pro Plus", callback_data="adm:promo:type:premium_plus")
     builder.button(text="❌ Отмена", callback_data="adm:cancel")
     builder.adjust(2, 1)
     return builder.as_markup()
@@ -159,8 +159,8 @@ def admin_users_kb(users: list, page: int, total: int, per_page: int = 10) -> In
 
 def admin_user_kb(user_id: int, has_session: bool) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.button(text="⭐ Выдать Premium", callback_data=f"adm:give:{user_id}")
-    builder.button(text="❌ Отозвать Premium", callback_data=f"adm:revoke:{user_id}")
+    builder.button(text="⭐ Выдать Pro", callback_data=f"adm:give:{user_id}")
+    builder.button(text="❌ Отозвать Pro", callback_data=f"adm:revoke:{user_id}")
     builder.button(text="💸 Вернуть Stars", callback_data=f"adm:refund:{user_id}")
     builder.button(text="⏱ Сбросить дни (тест)", callback_data=f"adm:resetdays:{user_id}")
     if has_session:
@@ -173,7 +173,7 @@ def admin_user_kb(user_id: int, has_session: bool) -> InlineKeyboardMarkup:
 def admin_broadcast_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="👥 Всем", callback_data="adm:bc:all")
-    builder.button(text="⭐ Premium", callback_data="adm:bc:premium")
+    builder.button(text="⭐ Pro", callback_data="adm:bc:premium")
     builder.button(text="🎁 Trial", callback_data="adm:bc:trial")
     builder.button(text="🆓 Бесплатным", callback_data="adm:bc:free")
     builder.button(text="◀️ Назад", callback_data="adm:main")
@@ -193,7 +193,7 @@ def expired_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="🎟 Ввести промокод", callback_data="promo:enter")
     builder.button(text="🔗 Пригласить друга (+7 дней)", callback_data="invite:get_link")
-    builder.button(text="⭐ Купить Premium", callback_data="premium:info")
+    builder.button(text="⭐ Купить Pro", callback_data="premium:info")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -208,7 +208,7 @@ def confirm_delete_kb() -> InlineKeyboardMarkup:
 
 def status_kb(is_premium: bool) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    label = "⭐ Продлить Premium" if is_premium else "⭐ Купить Premium"
+    label = "⭐ Продлить Pro" if is_premium else "⭐ Купить Pro"
     builder.button(text=label, callback_data="premium:info")
     builder.button(text="🔗 Пригласить друга (+7 дней)", callback_data="invite:get_link")
     builder.button(text="🎟 Ввести промокод", callback_data="promo:enter")

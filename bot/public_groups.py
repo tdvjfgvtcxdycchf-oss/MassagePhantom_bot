@@ -42,7 +42,7 @@ def _chat_display(g: dict) -> str:
 async def pubgroups_list(cb: CallbackQuery) -> None:
     user_id = cb.from_user.id
     if not await db.is_premium_plus(user_id):
-        await cb.answer("Требуется Premium Plus", show_alert=True)
+        await cb.answer("Требуется Pro Plus", show_alert=True)
         return
     groups = await db.get_public_groups(user_id)
     can_add = len(groups) < PUBLIC_GROUP_LIMIT

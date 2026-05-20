@@ -302,10 +302,10 @@ async def cmd_status(event, **_) -> None:
     active = get_client(user_id) is not None
 
     if until == -1:
-        plan_text = "⭐ <b>Premium (владелец)</b> — навсегда"
+        plan_text = "⭐ <b>Pro (владелец)</b> — навсегда"
     elif days > 0:
         dt = datetime.fromtimestamp(until).strftime("%d.%m.%Y")
-        plan_text = f"⭐ <b>Premium активен</b> до {dt} ({days} дн.)"
+        plan_text = f"⭐ <b>Pro активен</b> до {dt} ({days} дн.)"
     else:
         plan_text = "🆓 <b>Бесплатный тариф</b> (только личные чаты)"
 
@@ -503,13 +503,13 @@ async def promo_code_input(msg: Message, state: FSMContext) -> None:
     promo_type = promo.get("promo_type", "premium")
     if promo_type == "premium_plus":
         if not await db.is_premium(user_id):
-            await msg.answer("❗ Для активации Premium Plus сначала необходим активный Premium.")
+            await msg.answer("❗ Для активации Pro Plus сначала необходим активный Pro.")
             return
         new_until = await db.set_premium_plus(user_id, months=months)
-        label = "🌟 Premium Plus"
+        label = "🌟 Pro Plus"
     else:
         new_until = await db.set_premium(user_id, months)
-        label = "⭐ Premium"
+        label = "⭐ Pro"
     dt = datetime.fromtimestamp(new_until).strftime("%d.%m.%Y")
     await msg.answer(
         f"✅ <b>Промокод активирован!</b>\n\n"
@@ -536,9 +536,9 @@ async def _menu_header(user_id: int) -> str:
     conn = "🟢 Подключён" if (session and active) else ("🟡 Не активен" if session else "🔴 Не подключён")
 
     if until == -1:
-        plan = "⭐ Premium навсегда"
+        plan = "⭐ Pro навсегда"
     elif days > 0:
-        plan = f"{'🌟 Premium Plus' if premium_plus else '⭐ Premium'} · {days} дн."
+        plan = f"{'🌟 Pro Plus' if premium_plus else '⭐ Pro'} · {days} дн."
     else:
         plan = "🆓 Бесплатный"
 

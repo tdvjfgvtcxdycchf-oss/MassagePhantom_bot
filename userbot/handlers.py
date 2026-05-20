@@ -55,7 +55,7 @@ def _chat_type(event) -> str:
     if event.is_private:
         return "private"
     # Супергруппы: is_group=True И is_channel=True → "channel" (требует Plus)
-    # Базовые группы: is_group=True, is_channel=False → "group" (обычный Premium)
+    # Базовые группы: is_group=True, is_channel=False → "group" (обычный Pro)
     if event.is_channel:
         return "channel"
     if event.is_group:
@@ -176,7 +176,7 @@ async def _notify_teaser_delete(owner_id: int, cached: dict) -> None:
             f"━━━━━━━━━━━━━━━━━━━━\n"
             f"👤 {sender_str}\n"
             f"🕐 {_fmt_time(ts)}\n\n"
-            f"<i>Содержимое скрыто — оформи Premium, пригласи друга или введи промокод.</i>",
+            f"<i>Содержимое скрыто — оформи Pro, пригласи друга или введи промокод.</i>",
             reply_markup=expired_kb(),
         )
     except Exception as e:
@@ -203,7 +203,7 @@ def register(client: TelegramClient, owner_id: int) -> None:
             if not await db.is_monitored_public_group(owner_id, event.chat_id):
                 return
 
-        # Базовые группы без Premium: тизер только для личных чатов, группы пропускаем
+        # Базовые группы без Pro: тизер только для личных чатов, группы пропускаем
         if chat_type == "group" and not premium:
             return
 
