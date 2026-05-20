@@ -14,6 +14,25 @@ import db
 
 logger = logging.getLogger(__name__)
 
+# Кеш статуса premium — (is_premium, is_plus, timestamp)
+_status_cache: dict[int, tuple[bool, bool, float]] = {}
+_CACHE_TTL = 300  # 5 минут
+
+
+async def _user_status(uid: int) -> tuple[bool, bool]:
+    now = time.time()
+    cached = _status_cache.get(uid)
+    if cached and now - cached[2] < _CACHE_TTL:
+        return cached[0], cached[1]
+    premium = await db.is_premium(uid)
+    plus = await db.is_premium_plus(uid)
+    _status_cache[uid] = (premium, plus, now)
+    return premium, plus
+
+
+def invalidate_status_cache(uid: int) -> None:
+    _status_cache.pop(uid, None)
+
 CHAT_TYPE_LABELS = {
     "private":    "💬 Личные",
     "group":      "👥 Группа",
@@ -35,11 +54,12 @@ MEDIA_TYPE_LABELS = {
 def _chat_type(event) -> str:
     if event.is_private:
         return "private"
-    # is_group=True для обычных групп И supergroups; is_channel=True только для broadcast
-    if event.is_group:
-        return "group"
+    # Супергруппы: is_group=True И is_channel=True → "channel" (требует Plus)
+    # Базовые группы: is_group=True, is_channel=False → "group" (обычный Premium)
     if event.is_channel:
         return "channel"
+    if event.is_group:
+        return "group"
     return "group"
 
 
@@ -174,14 +194,20 @@ def register(client: TelegramClient, owner_id: int) -> None:
             return
 
         chat_type = _chat_type(event)
-        chat = await event.get_chat()
+        premium, plus = await _user_status(owner_id)
 
-        # Каналы и публичные группы — только для Premium Plus участников с добавленным чатом
-        if chat_type == "channel" or (chat_type == "group" and getattr(chat, 'username', None)):
-            if not await db.is_premium_plus(owner_id):
+        # Каналы/супергруппы: проверяем до get_chat()
+        if chat_type == "channel":
+            if not plus:
                 return
             if not await db.is_monitored_public_group(owner_id, event.chat_id):
                 return
+
+        # Базовые группы без Premium: тизер только для личных чатов, группы пропускаем
+        if chat_type == "group" and not premium:
+            return
+
+        chat = await event.get_chat()
 
         try:
             sender = await event.get_sender()
@@ -232,14 +258,18 @@ def register(client: TelegramClient, owner_id: int) -> None:
             return
 
         chat_type = _chat_type(event)
-        _chat = await event.get_chat()
+        premium, plus = await _user_status(owner_id)
 
-        # Каналы и публичные группы — только для Premium Plus участников с добавленным чатом
-        if chat_type == "channel" or (chat_type == "group" and getattr(_chat, 'username', None)):
-            if not await db.is_premium_plus(owner_id):
+        if chat_type == "channel":
+            if not plus:
                 return
             if not await db.is_monitored_public_group(owner_id, event.chat_id):
                 return
+
+        if chat_type == "group" and not premium:
+            return
+
+        _chat = await event.get_chat()
 
         try:
             _s = await event.get_sender()

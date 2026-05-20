@@ -121,7 +121,8 @@ def promo_type_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="⭐ Premium", callback_data="adm:promo:type:premium")
     builder.button(text="🌟 Premium Plus", callback_data="adm:promo:type:premium_plus")
-    builder.adjust(2)
+    builder.button(text="❌ Отмена", callback_data="adm:cancel")
+    builder.adjust(2, 1)
     return builder.as_markup()
 
 
@@ -129,7 +130,8 @@ def promo_months_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     for m, label in [(1, "1 месяц"), (3, "3 месяца"), (6, "6 месяцев"), (12, "12 месяцев")]:
         builder.button(text=label, callback_data=f"adm:promo:months:{m}")
-    builder.adjust(2)
+    builder.button(text="❌ Отмена", callback_data="adm:cancel")
+    builder.adjust(2, 2, 1)
     return builder.as_markup()
 
 

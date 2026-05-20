@@ -32,7 +32,7 @@ async def premium_info(cb: CallbackQuery) -> None:
         lines.append(f"• {label} — <b>{price} ⭐</b>")
     await cb.message.edit_text(
         "⭐ <b>Premium</b>\n\n"
-        "Полный доступ к перехвату событий в личных чатах и приватных группах.\n\n"
+        "Видишь удалённые и отредактированные сообщения в личных переписках и небольших личных группах.\n\n"
         "<b>Что включено:</b>\n"
         "• 🗑 Полный текст удалённых сообщений\n"
         "• ✏️ История редактирований — видишь что было до правки\n"
@@ -75,10 +75,10 @@ async def premium_plus_info(cb: CallbackQuery) -> None:
         lines.append(f"• {label} — <b>{price} ⭐</b>")
     await cb.message.edit_text(
         "🌟 <b>Premium Plus</b>\n\n"
-        "Расширение для тех, кто хочет контролировать больше.\n\n"
+        "Расширение для тех, кто хочет больше.\n\n"
         "<b>Что добавляет:</b>\n"
-        "• 📡 Мониторинг любых групп и каналов — публичных и приватных\n"
-        "• До <b>3 чатов</b> на выбор\n\n"
+        "• Видишь удалённые и отредактированные в больших группах-сообществах и каналах\n"
+        "• До <b>3 чатов</b> на выбор — добавляешь сам\n\n"
         "<b>Требует активный Premium.</b>\n\n"
         "<b>Тарифы:</b>\n" + "\n".join(lines) + "\n\n"
         "Оплата через Telegram Stars.",
@@ -102,7 +102,7 @@ async def send_plus_invoice(cb: CallbackQuery) -> None:
     await bot.send_invoice(
         chat_id=cb.from_user.id,
         title=f"🌟 Premium Plus — {label}",
-        description=f"Мониторинг публичных групп на {label.lower()}.",
+        description=f"Удалённые и отредактированные в группах-сообществах и каналах на {label.lower()}.",
         payload=f"premium_plus:{months}",
         currency="XTR",
         prices=[LabeledPrice(label=label, amount=price)],
@@ -132,6 +132,9 @@ async def payment_success(msg: Message) -> None:
 
     await db.save_payment(user_id, charge_id, amount, months)
 
+    from userbot.handlers import invalidate_status_cache
+    invalidate_status_cache(user_id)
+
     if payment_type == "premium_plus":
         expires = await db.set_premium_plus(user_id, months=months)
         dt = datetime.fromtimestamp(expires).strftime("%d.%m.%Y")
@@ -139,7 +142,7 @@ async def payment_success(msg: Message) -> None:
         await msg.answer(
             f"🌟 <b>Premium Plus активирован!</b>\n\n"
             f"Действует до: <b>{dt}</b>\n\n"
-            "Теперь можешь добавить до 3 групп или каналов для мониторинга — публичных и приватных.",
+            "Теперь можешь добавить до 3 больших групп или каналов — и видеть удалённые и отредактированные сообщения и в них.",
             reply_markup=main_menu_kb(premium, is_premium_plus=True),
         )
     else:

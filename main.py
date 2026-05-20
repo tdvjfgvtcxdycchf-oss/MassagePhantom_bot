@@ -57,7 +57,7 @@ async def _send_expiry_notice(user_id: int) -> None:
         await bot.send_message(
             user_id,
             "⏰ <b>Твой Premium закончился.</b>\n\n"
-            "Продли подписку, введи промокод или пригласи друга — и мониторинг продолжится.",
+            "Продли подписку, введи промокод или пригласи друга — и бот продолжит работу.",
             reply_markup=expired_kb(),
         )
     except Exception as e:
