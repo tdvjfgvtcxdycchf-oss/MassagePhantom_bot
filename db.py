@@ -851,8 +851,8 @@ async def get_public_groups(owner_id: int) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-async def add_public_group(owner_id: int, chat_id: int, chat_username: str, chat_title: str) -> bool:
-    """Добавляет группу. Возвращает False если лимит исчерпан или уже есть."""
+async def add_public_group(owner_id: int, chat_id: int, chat_username: str | None, chat_title: str) -> bool:
+    """Добавляет чат. Возвращает False если лимит исчерпан или уже есть."""
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute(
             "SELECT COUNT(*) FROM public_group_monitors WHERE owner_id=?", (owner_id,)
@@ -863,7 +863,7 @@ async def add_public_group(owner_id: int, chat_id: int, chat_username: str, chat
         try:
             await db.execute(
                 "INSERT INTO public_group_monitors (owner_id, chat_id, chat_username, chat_title, added_at) VALUES (?,?,?,?,?)",
-                (owner_id, chat_id, chat_username, chat_title, int(time.time())),
+                (owner_id, chat_id, chat_username or "", chat_title, int(time.time())),
             )
             await db.commit()
             return True

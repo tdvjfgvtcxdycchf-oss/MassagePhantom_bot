@@ -27,9 +27,9 @@ def main_menu_kb(is_premium: bool, is_owner: bool = False, is_premium_plus: bool
         # builder.button(text="⚙️ Фильтры уведомлений", callback_data="filters:main")
         builder.button(text="⭐ Продлить Premium", callback_data="premium:info")
         if not is_premium_plus:
-            builder.button(text="🌟 Premium Plus (публичные группы)", callback_data="premium_plus:info")
+            builder.button(text="🌟 Premium Plus (группы и каналы)", callback_data="premium_plus:info")
         else:
-            builder.button(text="🌐 Публичные группы", callback_data="pubgroups:list")
+            builder.button(text="🌐 Мои чаты", callback_data="pubgroups:list")
     builder.adjust(1)
     return builder.as_markup()
 

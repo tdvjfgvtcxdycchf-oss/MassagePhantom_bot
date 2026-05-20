@@ -174,22 +174,19 @@ def register(client: TelegramClient, owner_id: int) -> None:
             return
 
         chat_type = _chat_type(event)
-
-        # Только личка и непубличные группы
-        if chat_type == "channel":
-            return
-
         chat = await event.get_chat()
 
-        if chat_type == "group" and getattr(chat, 'username', None):
+        # Каналы и публичные группы — только для Premium Plus участников с добавленным чатом
+        if chat_type == "channel" or (chat_type == "group" and getattr(chat, 'username', None)):
             if not await db.is_premium_plus(owner_id):
                 return
             if not await db.is_monitored_public_group(owner_id, event.chat_id):
                 return
 
-        # get_sender() надёжнее event.sender_id — в некоторых случаях
-        # (каналы, боты) sender_id может вернуть peer_id вместо from_id
-        sender = await event.get_sender()
+        try:
+            sender = await event.get_sender()
+        except Exception:
+            sender = None
         if getattr(sender, 'id', None) == _bot_id:
             return
 
@@ -235,18 +232,14 @@ def register(client: TelegramClient, owner_id: int) -> None:
             return
 
         chat_type = _chat_type(event)
+        _chat = await event.get_chat()
 
-        # Только личка и непубличные группы
-        if chat_type == "channel":
-            return
-
-        if chat_type == "group":
-            _chat = await event.get_chat()
-            if getattr(_chat, 'username', None):
-                if not await db.is_premium_plus(owner_id):
-                    return
-                if not await db.is_monitored_public_group(owner_id, event.chat_id):
-                    return
+        # Каналы и публичные группы — только для Premium Plus участников с добавленным чатом
+        if chat_type == "channel" or (chat_type == "group" and getattr(_chat, 'username', None)):
+            if not await db.is_premium_plus(owner_id):
+                return
+            if not await db.is_monitored_public_group(owner_id, event.chat_id):
+                return
 
         try:
             _s = await event.get_sender()
@@ -274,12 +267,14 @@ def register(client: TelegramClient, owner_id: int) -> None:
 
         await db.save_edit(owner_id, event.chat_id, msg.id, old_text, new_text)
 
-        sender = await event.get_sender()
-        chat = await event.get_chat()
+        try:
+            sender = await event.get_sender()
+        except Exception:
+            sender = None
         from_username = getattr(sender, "username", None)
         from_name = getattr(sender, "first_name", None) or getattr(sender, "title", "") or ""
-        chat_title = getattr(chat, "title", None) or from_name
-        chat_username = getattr(chat, "username", None)
+        chat_title = getattr(_chat, "title", None) or from_name
+        chat_username = getattr(_chat, "username", None)
 
         await db.save_message(
             owner_id=owner_id,
