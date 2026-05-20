@@ -445,7 +445,7 @@ async def invite_get_link(cb: CallbackQuery) -> None:
     kb = _IKB()
     kb.row(InlineKeyboardButton(text="◀️ В меню", callback_data="back_menu"))
 
-    await cb.message.answer("📤 <b>Перешли сообщение ниже другу</b> — в нём уже есть картинка и ссылка 👇")
+    await cb.message.answer("📤 <b>Перешли сообщение ниже другу:</b>")
 
     promo = Path("/app/promo.jpg")
     if promo.exists():
