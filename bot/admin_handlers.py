@@ -296,12 +296,12 @@ async def adm_bc_send(cb: CallbackQuery, state: FSMContext) -> None:
     await cb.answer()
 
 
-@router.callback_query(F.data.in_({"adm:bc:all", "adm:bc:premium", "adm:bc:trial", "adm:bc:free"}))
+@router.callback_query(F.data.in_({"adm:bc:all", "adm:bc:premium", "adm:bc:trial", "adm:bc:free", "adm:bc:no_session"}))
 async def adm_bc_select_target(cb: CallbackQuery, state: FSMContext) -> None:
     if not _owner_only(cb.from_user.id):
         return
     target = cb.data.split(":")[2]
-    labels = {"all": "всем", "premium": "Pro", "trial": "Trial", "free": "бесплатным"}
+    labels = {"all": "всем", "premium": "Pro", "trial": "Trial", "free": "бесплатным", "no_session": "без сессии"}
     await state.update_data(bc_target=target)
     await state.set_state(AdminState.waiting_broadcast_text)
     await cb.message.answer(

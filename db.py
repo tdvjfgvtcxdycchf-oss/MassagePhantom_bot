@@ -737,7 +737,7 @@ async def admin_user_detail(user_id: int) -> dict | None:
 
 
 async def admin_all_user_ids(status_filter: str | None = None) -> list[int]:
-    """Список всех user_id для рассылки. status_filter: 'premium'|'trial'|'free'|None."""
+    """Список всех user_id для рассылки. status_filter: 'premium'|'trial'|'free'|'no_session'|None."""
     now = int(time.time())
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
@@ -750,6 +750,9 @@ async def admin_all_user_ids(status_filter: str | None = None) -> list[int]:
         elif status_filter == "free":
             sql = "SELECT user_id FROM users WHERE (premium_until IS NULL OR premium_until <= ?) AND (trial_until IS NULL OR trial_until <= ?)"
             args = (now, now)
+        elif status_filter == "no_session":
+            sql = "SELECT u.user_id FROM users u LEFT JOIN sessions s ON s.user_id = u.user_id WHERE s.user_id IS NULL"
+            args = ()
         else:
             sql = "SELECT user_id FROM users"
             args = ()

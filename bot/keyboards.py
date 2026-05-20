@@ -176,8 +176,9 @@ def admin_broadcast_kb() -> InlineKeyboardMarkup:
     builder.button(text="⭐ Pro", callback_data="adm:bc:premium")
     builder.button(text="🎁 Trial", callback_data="adm:bc:trial")
     builder.button(text="🆓 Бесплатным", callback_data="adm:bc:free")
+    builder.button(text="📵 Без сессии", callback_data="adm:bc:no_session")
     builder.button(text="◀️ Назад", callback_data="adm:main")
-    builder.adjust(2, 2, 1)
+    builder.adjust(2, 2, 1, 1)
     return builder.as_markup()
 
 
