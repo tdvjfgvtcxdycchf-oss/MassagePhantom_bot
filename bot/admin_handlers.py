@@ -12,7 +12,7 @@ from config import config
 from bot.keyboards import (
     admin_main_kb, admin_users_kb, admin_user_kb,
     admin_broadcast_kb, admin_bc_confirm_kb,
-    admin_promos_kb, promo_months_kb, promo_type_kb,
+    admin_promos_kb, promo_months_kb, promo_type_kb, admin_cancel_kb,
 )
 
 logger = logging.getLogger(__name__)
@@ -154,7 +154,8 @@ async def adm_give_start(cb: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(AdminState.waiting_give_months)
     await cb.message.answer(
         f"Сколько месяцев выдать пользователю <code>{user_id}</code>?\n"
-        "Введи число (например: <code>1</code>, <code>3</code>, <code>12</code>):"
+        "Введи число (например: <code>1</code>, <code>3</code>, <code>12</code>):",
+        reply_markup=admin_cancel_kb(),
     )
     await cb.answer()
 
@@ -305,7 +306,8 @@ async def adm_bc_select_target(cb: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(AdminState.waiting_broadcast_text)
     await cb.message.answer(
         f"📢 Введи текст для рассылки <b>{labels.get(target, target)}</b>:\n\n"
-        "<i>(поддерживается HTML-форматирование)</i>"
+        "<i>(поддерживается HTML-форматирование)</i>",
+        reply_markup=admin_cancel_kb(),
     )
     await cb.answer()
 
@@ -333,7 +335,7 @@ async def adm_search_start(cb: CallbackQuery, state: FSMContext) -> None:
     if not _owner_only(cb.from_user.id):
         return
     await state.set_state(AdminState.waiting_search_id)
-    await cb.message.answer("🔍 Введи user_id для поиска:")
+    await cb.message.answer("🔍 Введи user_id для поиска:", reply_markup=admin_cancel_kb())
     await cb.answer()
 
 
@@ -379,12 +381,24 @@ async def adm_promo_delete(cb: CallbackQuery) -> None:
     await cb.answer(f"✅ Промокод {code} удалён", show_alert=True)
 
 
+@router.callback_query(F.data == "adm:cancel")
+async def adm_cancel(cb: CallbackQuery, state: FSMContext) -> None:
+    if not _owner_only(cb.from_user.id):
+        return
+    await state.clear()
+    await _show_dashboard(cb.message, edit=False)
+    await cb.answer()
+
+
 @router.callback_query(F.data == "adm:promo:create")
 async def adm_promo_create_start(cb: CallbackQuery, state: FSMContext) -> None:
     if not _owner_only(cb.from_user.id):
         return
     await state.set_state(AdminState.waiting_promo_code)
-    await cb.message.answer("🎟 Введи текст промокода (только латиница/цифры, например <code>SUMMER25</code>):")
+    await cb.message.answer(
+        "🎟 Введи текст промокода (только латиница/цифры, например <code>SUMMER25</code>):",
+        reply_markup=admin_cancel_kb(),
+    )
     await cb.answer()
 
 
@@ -423,7 +437,8 @@ async def adm_promo_months(cb: CallbackQuery, state: FSMContext) -> None:
     await cb.message.answer(
         f"Срок: <b>{months} мес.</b>\n\n"
         "Сколько раз можно использовать?\n"
-        "Введи число (например <code>5</code>) или <code>0</code> для безлимита:"
+        "Введи число (например <code>5</code>) или <code>0</code> для безлимита:",
+        reply_markup=admin_cancel_kb(),
     )
     await cb.answer()
 

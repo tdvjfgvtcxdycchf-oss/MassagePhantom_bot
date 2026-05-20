@@ -13,13 +13,13 @@ from telethon.errors import (
 
 import db
 from config import config
-from bot.keyboards import consent_kb, main_menu_kb, account_settings_kb, status_kb, confirm_delete_kb, cancel_kb, request_phone_kb, remove_kb
+from bot.keyboards import consent_kb, main_menu_kb, account_settings_kb, status_kb, confirm_delete_kb, cancel_kb, user_cancel_kb, request_phone_kb, remove_kb
 
 logger = logging.getLogger(__name__)
 router = Router()
 
 CONSENT_TEXT = (
-    "👋 <b>Добро пожаловать в Massage Phantom!</b>\n\n"
+    f"👋 <b>Добро пожаловать в {BOT_NAME}!</b>\n\n"
     "Этот бот использует технологию <b>юзербота</b> — он подключается к твоему аккаунту Telegram и работает в фоне от твоего имени.\n\n"
     "<b>Как это работает:</b>\n"
     "Когда кто-то удаляет или редактирует сообщение в твоих чатах — бот уже успел его сохранить и мгновенно присылает тебе уведомление с полным содержимым.\n\n"
@@ -33,6 +33,15 @@ CONSENT_TEXT = (
     "• Номер телефона и медиафайлы не сохраняются\n\n"
     "Удалить все свои данные можно в любой момент через меню.\n\n"
     "<i>Нажимая «Принимаю», ты соглашаешься с условиями обработки данных.</i>"
+)
+
+
+BOT_NAME = "Massage Phantom"
+
+CONNECT_ACCOUNT_TEXT = (
+    "📱 <b>Укажи номер телефона — на его основе будет создан юзербот</b>\n"
+    "<i>(юзербот детектит только удаления, правки и одноразовые медиа)</i>\n\n"
+    "Нажми кнопку ниже или введи номер вручную в формате <code>+79001234567</code>"
 )
 
 
@@ -79,10 +88,7 @@ async def cmd_start(msg: Message, state: FSMContext) -> None:
             main_menu_kb(premium, is_owner=is_owner, is_premium_plus=premium_plus),
         )
     else:
-        await msg.answer(
-            "🔌 <b>Аккаунт не подключён.</b>\n\nНажми кнопку ниже или введи номер вручную (например: <code>+79001234567</code>)",
-            reply_markup=request_phone_kb(),
-        )
+        await msg.answer(CONNECT_ACCOUNT_TEXT, reply_markup=request_phone_kb())
         await state.set_state(AuthState.waiting_phone)
 
 
@@ -91,11 +97,8 @@ async def cmd_start(msg: Message, state: FSMContext) -> None:
 @router.callback_query(F.data == "consent:accept")
 async def consent_accept(cb: CallbackQuery, state: FSMContext) -> None:
     await db.set_consent(cb.from_user.id, True)
-    await cb.message.edit_text("✅ <b>Согласие получено.</b>\n\nТеперь подключи свой аккаунт.")
-    await cb.message.answer(
-        "Нажми кнопку ниже или введи номер вручную (например: <code>+79001234567</code>)",
-        reply_markup=request_phone_kb(),
-    )
+    await cb.message.edit_text("✅ <b>Отлично, добро пожаловать!</b>")
+    await cb.message.answer(CONNECT_ACCOUNT_TEXT, reply_markup=request_phone_kb())
     await state.set_state(AuthState.waiting_phone)
     await cb.answer()
 
@@ -243,14 +246,9 @@ async def _finalize_auth(msg: Message, state: FSMContext, client) -> None:
     await state.clear()
     premium = await db.is_premium(user_id)
     owner = user_id == config.owner_id
-    days = await db.get_days_left(user_id)
-    days_text = f" ({days} дн.)" if days > 0 else ""
     await _send_menu(
         msg,
-        "✅ <b>Аккаунт подключён!</b>\n\n"
-        "Бот теперь отслеживает твои переписки.\n"
-        + (f"⭐ <b>Premium активен{days_text}</b> — все чаты под контролем."
-           if premium else "🆓 <b>Бесплатный тариф:</b> только личные чаты.\n⭐ Нажми «Получить Premium» для групп и каналов."),
+        "✅ <b>Всё готово!</b>\n\nБот уже работает в фоне и перехватывает события в твоих чатах.",
         main_menu_kb(premium, is_owner=owner),
     )
 
@@ -379,13 +377,8 @@ async def disconnect(cb: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "reconnect")
 async def reconnect(cb: CallbackQuery, state: FSMContext) -> None:
-    await cb.message.edit_text(
-        "🔌 <b>Подключение аккаунта</b>\n\nВведи номер телефона или нажми кнопку:",
-    )
-    await cb.message.answer(
-        "Нажми кнопку ниже или введи номер вручную (например: <code>+79001234567</code>)",
-        reply_markup=request_phone_kb(),
-    )
+    await cb.message.edit_text("🔌 <b>Подключение аккаунта</b>")
+    await cb.message.answer(CONNECT_ACCOUNT_TEXT, reply_markup=request_phone_kb())
     await state.set_state(AuthState.waiting_phone)
     await cb.answer()
 
@@ -419,7 +412,7 @@ async def delete_data_confirm(cb: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
     await cb.message.edit_text(
         "✅ <b>Все данные удалены.</b>\n\n"
-        "Если захочешь снова — /start"
+        "Если захочешь вернуться — напиши /start"
     )
     await cb.answer()
 
@@ -436,8 +429,7 @@ async def invite_get_link(cb: CallbackQuery) -> None:
 
     # Подпись к фото — это то, что увидит друг при пересылке
     forward_caption = (
-        "👁 <b>Твой друг приглашает тебя в Massage Phantom</b>\n\n"
-        "Бот, который запоминает то, что другие хотят скрыть:\n"
+        f"👁 <b>{BOT_NAME}</b> — бот, который запоминает то, что другие хотят скрыть:\n"
         "• 🗑 удалённые сообщения\n"
         "• ✏️ отредактированные сообщения\n"
         "• 👁 одноразовые медиа\n\n"
@@ -472,8 +464,20 @@ async def invite_get_link(cb: CallbackQuery) -> None:
 
 @router.callback_query(F.data == "promo:enter")
 async def promo_enter(cb: CallbackQuery, state: FSMContext) -> None:
-    await cb.message.answer("🎟 Введи промокод:")
+    await cb.message.answer("🎟 Введи промокод:", reply_markup=user_cancel_kb())
     await state.set_state(PromoState.waiting_code)
+    await cb.answer()
+
+
+@router.callback_query(F.data == "user:cancel")
+async def user_cancel(cb: CallbackQuery, state: FSMContext) -> None:
+    await state.clear()
+    user_id = cb.from_user.id
+    premium = await db.is_premium(user_id)
+    premium_plus = await db.is_premium_plus(user_id)
+    owner = user_id == config.owner_id
+    header = await _menu_header(user_id)
+    await cb.message.edit_text(header, reply_markup=main_menu_kb(premium, is_owner=owner, is_premium_plus=premium_plus))
     await cb.answer()
 
 
@@ -498,6 +502,9 @@ async def promo_code_input(msg: Message, state: FSMContext) -> None:
     months = promo["months"]
     promo_type = promo.get("promo_type", "premium")
     if promo_type == "premium_plus":
+        if not await db.is_premium(user_id):
+            await msg.answer("❗ Для активации Premium Plus сначала необходим активный Premium.")
+            return
         new_until = await db.set_premium_plus(user_id, months=months)
         label = "🌟 Premium Plus"
     else:

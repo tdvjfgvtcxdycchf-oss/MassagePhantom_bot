@@ -156,7 +156,7 @@ async def _notify_teaser_delete(owner_id: int, cached: dict) -> None:
             f"━━━━━━━━━━━━━━━━━━━━\n"
             f"👤 {sender_str}\n"
             f"🕐 {_fmt_time(ts)}\n\n"
-            f"<i>Содержимое скрыто. Подключи Premium чтобы видеть удалённые сообщения.</i>",
+            f"<i>Содержимое скрыто — оформи Premium, пригласи друга или введи промокод.</i>",
             reply_markup=expired_kb(),
         )
     except Exception as e:

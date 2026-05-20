@@ -189,8 +189,9 @@ def admin_bc_confirm_kb(target: str) -> InlineKeyboardMarkup:
 
 def expired_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
-    builder.button(text="⭐ Купить Premium", callback_data="premium:info")
+    builder.button(text="🎟 Ввести промокод", callback_data="promo:enter")
     builder.button(text="🔗 Пригласить друга (+7 дней)", callback_data="invite:get_link")
+    builder.button(text="⭐ Купить Premium", callback_data="premium:info")
     builder.adjust(1)
     return builder.as_markup()
 
@@ -217,6 +218,18 @@ def status_kb(is_premium: bool) -> InlineKeyboardMarkup:
 def cancel_kb() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     builder.button(text="❌ Отмена", callback_data="auth:cancel")
+    return builder.as_markup()
+
+
+def user_cancel_kb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="❌ Отмена", callback_data="user:cancel")
+    return builder.as_markup()
+
+
+def admin_cancel_kb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.button(text="❌ Отмена", callback_data="adm:cancel")
     return builder.as_markup()
 
 

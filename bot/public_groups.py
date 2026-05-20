@@ -54,9 +54,13 @@ async def pubgroups_add_start(cb: CallbackQuery, state: FSMContext) -> None:
         await cb.answer(f"Лимит {PUBLIC_GROUP_LIMIT} группы достигнут", show_alert=True)
         return
     await state.set_state(AddGroupState.waiting_username)
+    from aiogram.utils.keyboard import InlineKeyboardBuilder as _IKB
+    cancel_kb = _IKB()
+    cancel_kb.button(text="❌ Отмена", callback_data="pubgroups:list")
     await cb.message.answer(
         "Отправь @username публичной группы которую хочешь мониторить.\n\n"
-        "Ты должен быть участником этой группы."
+        "Ты должен быть участником этой группы.",
+        reply_markup=cancel_kb.as_markup(),
     )
     await cb.answer()
 
